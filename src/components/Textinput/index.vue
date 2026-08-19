@@ -29,6 +29,8 @@
         :readonly="isReadonly"
         :disabled="disabled"
         :validate="validate"
+        :min="min"
+        :max="max"
         v-if="!isMask"
       />
       <cleave
@@ -156,6 +158,12 @@ export default {
       default: false,
     },
     description: {
+      type: String,
+    },
+    min: {
+      type: String,
+    },
+    max: {
       type: String,
     },
     isMask: {

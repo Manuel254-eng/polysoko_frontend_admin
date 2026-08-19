@@ -10,6 +10,12 @@ table.vgt-table {
 .vgt-wrap {
   .vgt-responsive {
     border-radius: 100px !important;
+    // Per the CSS overflow spec, a browser can't leave one axis visible while
+    // the other clips — if either axis isn't visible, both get force-coerced
+    // to auto. So overflow-y: visible alone (with overflow-x: auto from the
+    // library) still clips. The action dropdown's menu needs to escape this
+    // container entirely, so drop the horizontal auto-scroll too.
+    overflow: visible !important;
   }
 }
 

@@ -637,6 +637,34 @@ const routes = [
         name: "users-create",
         component: () => import("@/views/users/create.vue"),
       },
+      {
+        path: "markets",
+        name: "markets",
+        component: () => import("@/views/markets/index.vue"),
+      },
+      {
+        path: "markets/create",
+        name: "markets-create",
+        component: () => import("@/views/markets/create.vue"),
+      },
+      {
+        path: "markets/categories",
+        name: "market-categories",
+        component: () => import("@/views/markets/categories/index.vue"),
+      },
+      {
+        path: "markets/categories/create",
+        name: "market-categories-create",
+        component: () => import("@/views/markets/categories/create.vue"),
+      },
+      {
+        path: "markets/:id",
+        name: "market-details",
+        component: () => import("@/views/markets/view.vue"),
+        meta: {
+          hide: true,
+        },
+      },
     ],
   },
   {
