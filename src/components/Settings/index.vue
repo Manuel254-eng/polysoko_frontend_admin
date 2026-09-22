@@ -51,9 +51,6 @@
             <div><Rlt /></div>
             <hr class="-mx-6 border-slate-200 dark:border-slate-700" />
             <Width />
-            <div class="xl:block hidden">
-              <MenuLayout />
-            </div>
             <hr class="-mx-6 border-slate-200 dark:border-slate-700" />
 
             <Navbar />
@@ -74,7 +71,6 @@
 <script>
 import Icon from "../Icon";
 import Footer from "./Tools/Footer";
-import MenuLayout from "./Tools/MenuLayout";
 import Navbar from "./Tools/Navbar";
 import Skin from "./Tools/Skin";
 import Width from "./Tools/Width";
@@ -89,7 +85,6 @@ export default {
     Icon,
     Width,
     Skin,
-    MenuLayout,
     Navbar,
     Theme,
     Footer,

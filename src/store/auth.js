@@ -7,7 +7,7 @@ export const useAuthStore = defineStore("auth", {
   }),
   actions: {
     async fetchMe() {
-      const response = await api.get("/user/me/");
+      const response = await api.get("/user/staff/me/");
       this.user = response.data;
       localStorage.setItem("activeUser", JSON.stringify(response.data));
       return response.data;

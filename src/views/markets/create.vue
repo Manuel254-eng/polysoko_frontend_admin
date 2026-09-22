@@ -54,36 +54,42 @@
               </select>
               <div v-if="fieldErrors.category" class="text-danger-500 text-sm mt-1">{{ fieldErrors.category }}</div>
             </div>
-            <Textinput
-              label="Opens at"
-              type="datetime-local"
-              name="open_at"
-              v-model="openAt"
-              :min="minDateTime"
-              :error="fieldErrors.open_at"
-              classInput="h-[48px]"
-              @click="clearFieldError('open_at')"
-            />
-            <Textinput
-              label="Closes at"
-              type="datetime-local"
-              name="close_at"
-              v-model="closeAt"
-              :min="openAt || minDateTime"
-              :error="fieldErrors.close_at"
-              classInput="h-[48px]"
-              @click="clearFieldError('close_at')"
-            />
-            <Textinput
-              label="Resolution date"
-              type="datetime-local"
-              name="resolution_date"
-              v-model="resolutionDate"
-              :min="closeAt || openAt || minDateTime"
-              :error="fieldErrors.resolution_date"
-              classInput="h-[48px]"
-              @click="clearFieldError('resolution_date')"
-            />
+            <div @click="clearFieldError('open_at')">
+              <label class="input-label" for="open_at">Opens at</label>
+              <flat-pickr
+                id="open_at"
+                name="open_at"
+                v-model="openAt"
+                :config="openAtConfig"
+                placeholder="Select date and time"
+                class="input-control w-full h-[48px]"
+              />
+              <span v-if="fieldErrors.open_at" class="text-danger-500 block text-sm mt-2">{{ fieldErrors.open_at }}</span>
+            </div>
+            <div @click="clearFieldError('close_at')">
+              <label class="input-label" for="close_at">Closes at</label>
+              <flat-pickr
+                id="close_at"
+                name="close_at"
+                v-model="closeAt"
+                :config="closeAtConfig"
+                placeholder="Select date and time"
+                class="input-control w-full h-[48px]"
+              />
+              <span v-if="fieldErrors.close_at" class="text-danger-500 block text-sm mt-2">{{ fieldErrors.close_at }}</span>
+            </div>
+            <div @click="clearFieldError('resolution_date')">
+              <label class="input-label" for="resolution_date">Resolution date</label>
+              <flat-pickr
+                id="resolution_date"
+                name="resolution_date"
+                v-model="resolutionDate"
+                :config="resolutionDateConfig"
+                placeholder="Select date and time"
+                class="input-control w-full h-[48px]"
+              />
+              <span v-if="fieldErrors.resolution_date" class="text-danger-500 block text-sm mt-2">{{ fieldErrors.resolution_date }}</span>
+            </div>
           </div>
 
           <div class="mb-5">
@@ -97,7 +103,13 @@
             />
           </div>
 
-          <div v-if="errorMessage" class="text-danger-500 text-sm mb-5">{{ errorMessage }}</div>
+          <div class="mb-5">
+            <label class="input-label">Market type</label>
+            <div class="flex items-center gap-6">
+              <Radio v-model="isCustom" name="market-type" :value="false" label="Default (Yes / No)" />
+              <Radio v-model="isCustom" name="market-type" :value="true" label="Custom outcomes" />
+            </div>
+          </div>
 
           <div class="ltr:text-right rtl:text-left">
             <router-link :to="{ name: 'markets' }" class="btn btn-outline-dark ltr:mr-3 rtl:ml-3">Cancel</router-link>
@@ -106,49 +118,115 @@
         </form>
 
         <form v-else @submit.prevent="submitDetails" novalidate>
-          <div class="lg:grid-cols-3 md:grid-cols-2 grid-cols-1 grid gap-5 mb-5">
-            <Textinput
-              label="Yes probability (0–1)"
-              type="number"
-              name="yes_probability"
-              v-model="yesProbability"
-              :error="detailErrors.yes_probability"
-              step="0.0001"
-              min="0"
-              max="1"
-              classInput="h-[48px]"
-            />
-            <Textinput
-              label="No probability"
-              type="text"
-              name="no_probability"
-              :modelValue="noProbabilityPreview"
-              disabled
-              classInput="h-[48px]"
-            />
-            <Textinput
-              label="Contract payout (KES)"
-              type="number"
-              name="contract_payout"
-              v-model="contractPayout"
-              :error="detailErrors.contract_payout"
-              step="0.01"
-              min="0"
-              classInput="h-[48px]"
-            />
-            <Textinput
-              label="Liquidity (KES)"
-              type="number"
-              name="liquidity"
-              v-model="liquidity"
-              :error="detailErrors.liquidity"
-              step="0.01"
-              min="0.01"
-              classInput="h-[48px]"
-            />
-          </div>
+          <template v-if="!isCustom">
+            <div class="lg:grid-cols-3 md:grid-cols-2 grid-cols-1 grid gap-5 mb-5">
+              <Textinput
+                label="Yes probability (0–1)"
+                type="number"
+                name="yes_probability"
+                v-model="yesProbability"
+                :error="detailErrors.yes_probability"
+                step="0.0001"
+                min="0"
+                max="1"
+                classInput="h-[48px]"
+              />
+              <Textinput
+                label="No probability"
+                type="text"
+                name="no_probability"
+                :modelValue="noProbabilityPreview"
+                disabled
+                classInput="h-[48px]"
+              />
+              <Textinput
+                label="Liquidity (KES)"
+                type="number"
+                name="liquidity"
+                v-model="liquidity"
+                :error="detailErrors.liquidity"
+                step="0.01"
+                min="0.01"
+                classInput="h-[48px]"
+                placeholder="0.01"
+              />
+            </div>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mb-5">
+              A winning share always pays 1 KES, so there's no separate contract payout to set here.
+            </p>
+          </template>
 
-          <div v-if="detailsErrorMessage" class="text-danger-500 text-sm mb-5">{{ detailsErrorMessage }}</div>
+          <template v-else>
+            <div class="lg:grid-cols-2 grid-cols-1 grid gap-5 mb-5">
+              <Textinput
+                label="Max Loss Budget (KES)"
+                type="number"
+                name="choice_liquidity"
+                v-model="liquidity"
+                :error="detailErrors.liquidity"
+                step="0.01"
+                min="0.01"
+                classInput="h-[48px]"
+              />
+            </div>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mb-5">
+              The most the platform can lose across all trading on this market — not order-book depth like a
+              binary market's liquidity. Custom markets always pay 1 KES per winning share, so there's no
+              separate contract payout to set here.
+            </p>
+
+            <div class="mb-3 flex justify-between items-center">
+              <label class="input-label mb-0">Choices</label>
+              <span
+                class="text-sm font-medium"
+                :class="Math.abs(choicesTotal - 1) <= 0.001 ? 'text-success-500' : 'text-danger-500'"
+              >
+                Total: {{ choicesTotal.toFixed(4) }} / 1.0000
+              </span>
+            </div>
+
+            <div v-for="(choice, index) in choices" :key="index" class="flex items-start gap-3 mb-3">
+              <div class="flex-1">
+                <Textinput
+                  type="text"
+                  :placeholder="`Choice ${index + 1} label`"
+                  :name="`choice_label_${index}`"
+                  v-model="choice.label"
+                  :error="choiceErrors[index]?.label"
+                  classInput="h-[48px]"
+                />
+              </div>
+              <div class="w-36">
+                <Textinput
+                  type="number"
+                  placeholder="0.0000"
+                  :name="`choice_probability_${index}`"
+                  v-model="choice.probability"
+                  :error="choiceErrors[index]?.probability"
+                  step="0.0001"
+                  min="0"
+                  max="1"
+                  classInput="h-[48px]"
+                />
+              </div>
+              <button
+                v-if="choices.length > 2"
+                type="button"
+                class="h-[48px] w-[48px] flex-shrink-0 flex items-center justify-center rounded text-danger-500 border border-danger-500 border-opacity-30 hover:bg-danger-500 hover:bg-opacity-10"
+                @click="removeChoice(index)"
+              >
+                <Icon icon="heroicons-outline:trash" />
+              </button>
+            </div>
+
+            <button
+              type="button"
+              class="btn btn-outline-dark btn-sm mb-5 inline-flex items-center gap-1"
+              @click="addChoice"
+            >
+              <Icon icon="heroicons-outline:plus" /> Add choice
+            </button>
+          </template>
 
           <div class="flex justify-between">
             <Button
@@ -160,7 +238,7 @@
               @click="goBack"
             />
             <div>
-              <a href="#" class="btn btn-outline-dark ltr:mr-3 rtl:ml-3" @click.prevent="skipDetails">Skip</a>
+              <a v-if="!isCustom" href="#" class="btn btn-outline-dark ltr:mr-3 rtl:ml-3" @click.prevent="skipDetails">Skip</a>
               <Button text="Finish" btnClass="btn-dark" type="submit" :isDisabled="detailsLoading" :isLoading="detailsLoading" />
             </div>
           </div>
@@ -175,8 +253,9 @@ import Textinput from "@/components/Textinput";
 import Textarea from "@/components/Textarea";
 import Button from "@/components/Button";
 import Icon from "@/components/Icon";
+import Radio from "@/components/Radio";
 import { useRouter } from "vue-router";
-import { useToast } from "vue-toastification";
+import { pushSuccess, pushError } from "@/lib/alerts";
 import api from "@/lib/api";
 
 function extractFieldErrors(err) {
@@ -206,11 +285,10 @@ function toDateTimeLocal(date) {
 }
 
 export default {
-  components: { Card, Textinput, Textarea, Button, Icon },
+  components: { Card, Textinput, Textarea, Button, Icon, Radio },
   setup() {
-    const toast = useToast();
     const router = useRouter();
-    return { toast, router };
+    return { router };
   },
   data() {
     return {
@@ -228,22 +306,68 @@ export default {
       categories: [],
       loading: false,
       backLoading: false,
-      errorMessage: "",
       fieldErrors: {},
 
+      isCustom: false,
+
       yesProbability: "0.5",
-      contractPayout: "1.00",
       liquidity: "",
       detailsLoading: false,
-      detailsErrorMessage: "",
       detailErrors: {},
+
+      choices: [
+        { label: "", probability: "" },
+        { label: "", probability: "" },
+      ],
+      choiceErrors: {},
     };
   },
   computed: {
+    // altInput shows the human-readable altFormat text; the underlying
+    // v-model value keeps dateFormat so it stays a drop-in for
+    // new Date(...)/toDateTimeLocal() elsewhere in this component.
+    openAtConfig() {
+      return {
+        enableTime: true,
+        altInput: true,
+        // Without allowInput, flatpickr marks the alt input readonly, which
+        // triggers this project's own .input-control[readonly] grey styling.
+        allowInput: true,
+        altInputClass: "input-control w-full h-[48px]",
+        altFormat: "M j, Y h:i K",
+        dateFormat: "Y-m-d\\TH:i",
+        minDate: this.minDateTime,
+      };
+    },
+    closeAtConfig() {
+      return {
+        enableTime: true,
+        altInput: true,
+        allowInput: true,
+        altInputClass: "input-control w-full h-[48px]",
+        altFormat: "M j, Y h:i K",
+        dateFormat: "Y-m-d\\TH:i",
+        minDate: this.openAt || this.minDateTime,
+      };
+    },
+    resolutionDateConfig() {
+      return {
+        enableTime: true,
+        altInput: true,
+        allowInput: true,
+        altInputClass: "input-control w-full h-[48px]",
+        altFormat: "M j, Y h:i K",
+        dateFormat: "Y-m-d\\TH:i",
+        minDate: this.closeAt || this.openAt || this.minDateTime,
+      };
+    },
     noProbabilityPreview() {
       const yes = Number(this.yesProbability);
       if (Number.isNaN(yes)) return "—";
       return (1 - yes).toFixed(4);
+    },
+    choicesTotal() {
+      return this.choices.reduce((sum, choice) => sum + (Number(choice.probability) || 0), 0);
     },
   },
   watch: {
@@ -268,9 +392,6 @@ export default {
     yesProbability() {
       this.clearDetailError("yes_probability");
     },
-    contractPayout() {
-      this.clearDetailError("contract_payout");
-    },
     liquidity() {
       this.clearDetailError("liquidity");
     },
@@ -280,7 +401,7 @@ export default {
       const { data } = await api.get("/market/categories/");
       this.categories = data;
     } catch {
-      this.errorMessage = "Could not load categories. Please refresh and try again.";
+      pushError("Could not load categories. Please refresh and try again.");
     }
   },
   methods: {
@@ -351,7 +472,6 @@ export default {
       return true;
     },
     async submitMarket() {
-      this.errorMessage = "";
       if (!this.validateRequired()) return;
       if (!this.validateNotBackdated()) return;
       if (!this.validateDateOrder()) return;
@@ -365,6 +485,7 @@ export default {
           resolution_date: new Date(this.resolutionDate).toISOString(),
           open_at: new Date(this.openAt).toISOString(),
           close_at: new Date(this.closeAt).toISOString(),
+          is_custom: this.isCustom,
         };
         // Once step 1 has already created the market (e.g. after coming back
         // from step 2), re-submitting updates that same market instead of
@@ -376,13 +497,13 @@ export default {
         this.step = 2;
       } catch (err) {
         this.fieldErrors = extractFieldErrors(err);
-        this.errorMessage = extractGeneralError(err);
+        const message = extractGeneralError(err);
+        if (message) pushError(message);
       } finally {
         this.loading = false;
       }
     },
     async goBack() {
-      this.errorMessage = "";
       this.backLoading = true;
       try {
         const { data } = await api.get(`/market/${this.createdMarketId}/`);
@@ -392,17 +513,23 @@ export default {
         this.resolutionDate = toDateTimeLocal(new Date(data.resolution_date));
         this.openAt = toDateTimeLocal(new Date(data.open_at));
         this.closeAt = toDateTimeLocal(new Date(data.close_at));
+        this.isCustom = Boolean(data.is_custom);
         this.step = 1;
       } catch (err) {
-        this.detailsErrorMessage = extractGeneralError(err);
+        const message = extractGeneralError(err);
+        if (message) pushError(message);
       } finally {
         this.backLoading = false;
       }
     },
     async submitDetails() {
-      this.detailsErrorMessage = "";
+      if (this.isCustom) {
+        await this.submitChoices();
+        return;
+      }
+
       // Liquidity is deducted from the platform wallet on create, so unlike
-      // yes_probability/contract_payout it can't fall back to a model default.
+      // yes_probability it can't fall back to a model default.
       if (!this.liquidity || Number(this.liquidity) < 0.01) {
         this.detailErrors = { liquidity: "Liquidity is required and must be at least 0.01." };
         return;
@@ -412,20 +539,97 @@ export default {
       try {
         await api.post(`/market/${this.createdMarketId}/details/`, {
           yes_probability: this.yesProbability,
-          contract_payout: this.contractPayout,
           liquidity: this.liquidity,
         });
-        this.toast.success("Market created successfully", { timeout: 2000 });
+        pushSuccess("Market created successfully.");
         this.router.push({ name: "markets" });
       } catch (err) {
         this.detailErrors = extractFieldErrors(err);
-        this.detailsErrorMessage = extractGeneralError(err);
+        const message = extractGeneralError(err);
+        if (message) pushError(message);
       } finally {
         this.detailsLoading = false;
       }
     },
+    addChoice() {
+      this.choices.push({ label: "", probability: "" });
+    },
+    removeChoice(index) {
+      if (this.choices.length <= 2) return;
+      this.choices.splice(index, 1);
+      delete this.choiceErrors[index];
+    },
+    // Mirrors the backend's tolerance (MarketChoiceBulkSerializer.SUM_TOLERANCE)
+    // so a client-side pass and the server's own check agree on what "adds up
+    // to 1" means — thirds (0.3333 + 0.3333 + 0.3334) must pass both.
+    validateChoices() {
+      const errors = {};
+      this.choices.forEach((choice, index) => {
+        const fieldErrors = {};
+        if (!choice.label.trim()) fieldErrors.label = "Required.";
+        if (choice.probability === "" || Number.isNaN(Number(choice.probability))) {
+          fieldErrors.probability = "Required.";
+        }
+        if (Object.keys(fieldErrors).length > 0) errors[index] = fieldErrors;
+      });
+      this.choiceErrors = errors;
+      if (Object.keys(errors).length > 0) return false;
+
+      if (Math.abs(this.choicesTotal - 1) > 0.001) {
+        pushError(`Probabilities must add up to 1 — these add up to ${this.choicesTotal.toFixed(4)}.`);
+        return false;
+      }
+      return true;
+    },
+    async submitChoices() {
+      // The max-loss budget funds the LMSR pool (deducted from the platform
+      // wallet, same mechanism as a binary market's seed) so it can't fall
+      // back to a model default.
+      if (!this.liquidity || Number(this.liquidity) < 0.01) {
+        this.detailErrors = { liquidity: "Max loss budget is required and must be at least 0.01." };
+        return;
+      }
+      if (!this.validateChoices()) return;
+
+      this.detailsLoading = true;
+      try {
+        await api.post(`/market/${this.createdMarketId}/choices/`, {
+          choices: this.choices.map((choice) => ({
+            label: choice.label.trim(),
+            probability: choice.probability,
+          })),
+          liquidity: this.liquidity,
+        });
+        pushSuccess("Market created successfully.");
+        this.router.push({ name: "markets" });
+      } catch (err) {
+        pushError(this.extractChoicesError(err));
+      } finally {
+        this.detailsLoading = false;
+      }
+    },
+    // The bulk-choices endpoint's "sum to 1" and per-item errors both land
+    // under data.choices (a list-level error or a {index: {field: [...]}}
+    // dict) rather than non_field_errors/detail, so extractGeneralError()
+    // alone would miss them.
+    extractChoicesError(err) {
+      const data = err?.response?.data;
+      if (!data) return "Something went wrong. Please try again.";
+      if (Array.isArray(data.choices)) return data.choices.join(" ");
+      if (data.choices && typeof data.choices === "object") {
+        const fieldErrors = {};
+        for (const [index, fields] of Object.entries(data.choices)) {
+          fieldErrors[index] = Object.fromEntries(
+            Object.entries(fields).map(([field, messages]) => [field, Array.isArray(messages) ? messages.join(" ") : String(messages)]),
+          );
+        }
+        this.choiceErrors = fieldErrors;
+        return "Please fix the highlighted choices.";
+      }
+      return extractGeneralError(err) || "Could not save choices. Please try again.";
+    },
     skipDetails() {
-      this.toast.success("Market created successfully", { timeout: 2000 });
+      pushSuccess("Market created successfully.");
       this.router.push({ name: "markets" });
     },
   },

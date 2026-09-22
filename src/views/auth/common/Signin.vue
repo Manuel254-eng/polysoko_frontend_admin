@@ -23,8 +23,6 @@
       classInput="h-[48px]"
     />
 
-    <div v-if="errorMessage" class="text-danger-500 text-sm">{{ errorMessage }}</div>
-
     <button type="submit" class="btn btn-dark block w-full text-center" :disabled="loading">
       {{ loading ? "Signing in…" : "Sign in" }}
     </button>
@@ -54,9 +52,23 @@
     </div>
     <div v-if="fieldErrors.code" class="text-danger-500 text-sm text-center">{{ fieldErrors.code }}</div>
 
-    <div v-if="errorMessage" class="text-danger-500 text-sm">{{ errorMessage }}</div>
+    <p
+      class="text-sm text-center flex items-center justify-center gap-2"
+      :class="codeExpired ? 'text-danger-500' : 'text-slate-500 dark:text-slate-400'"
+    >
+      {{ codeExpired ? "Code expired" : `Code expires in ${formattedTime}` }}
+      <button
+        v-if="codeExpired"
+        type="button"
+        class="underline disabled:opacity-60"
+        :disabled="resending"
+        @click="requestResend"
+      >
+        {{ resending ? "Sending…" : "Resend code" }}
+      </button>
+    </p>
 
-    <button type="submit" class="btn btn-dark block w-full text-center" :disabled="loading">
+    <button type="submit" class="btn btn-dark block w-full text-center" :disabled="loading || codeExpired">
       {{ loading ? "Verifying…" : "Verify" }}
     </button>
     <button
@@ -130,8 +142,6 @@
       classInput="h-[48px]"
     />
 
-    <div v-if="errorMessage" class="text-danger-500 text-sm">{{ errorMessage }}</div>
-
     <button type="submit" class="btn btn-dark block w-full text-center" :disabled="loading">
       {{ loading ? "Saving…" : "Set new password" }}
     </button>
@@ -142,7 +152,7 @@ import Textinput from "@/components/Textinput";
 import InputGroup from "@/components/InputGroup";
 import Icon from "@/components/Icon";
 import { useRouter } from "vue-router";
-import { useToast } from "vue-toastification";
+import { pushSuccess, pushError } from "@/lib/alerts";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth";
 
@@ -178,11 +188,10 @@ export default {
     Icon,
   },
   setup() {
-    const toast = useToast();
     const router = useRouter();
     const authStore = useAuthStore();
 
-    return { toast, router, authStore };
+    return { router, authStore };
   },
   data() {
     return {
@@ -195,11 +204,21 @@ export default {
       confirmPassword: "",
       verificationSessionId: "",
       loading: false,
-      errorMessage: "",
+      resending: false,
       fieldErrors: {},
+      secondsLeft: 0,
+      timer: null,
     };
   },
   computed: {
+    formattedTime() {
+      const m = Math.floor(this.secondsLeft / 60);
+      const s = this.secondsLeft % 60;
+      return `${m}:${String(s).padStart(2, "0")}`;
+    },
+    codeExpired() {
+      return this.secondsLeft <= 0;
+    },
     // Digits-only, capped at 9 — the national number that follows the fixed
     // +254 prefix shown beside the input.
     phoneNumber: {
@@ -343,14 +362,48 @@ export default {
     },
     goToStep(step) {
       this.step = step;
-      this.errorMessage = "";
       this.fieldErrors = {};
       if (step === "otp") {
         this.$nextTick(() => this.$refs.codeBoxes?.[0]?.focus());
       }
     },
+    startCountdown(seconds) {
+      this.secondsLeft = Math.max(0, seconds);
+      clearInterval(this.timer);
+      this.timer = setInterval(() => {
+        if (this.secondsLeft > 0) this.secondsLeft--;
+      }, 1000);
+    },
+    // /user/staff-login/ only returns the session id, not the OTP's expiry — fetch
+    // it from the same generic status endpoint the player app's OTP step uses.
+    async loadOtpCountdown() {
+      try {
+        const { data } = await api.get(`/user/verification-session/${this.verificationSessionId}/`);
+        const remaining = data.otp_expires_at
+          ? Math.round((new Date(data.otp_expires_at).getTime() - Date.now()) / 1000)
+          : 0;
+        this.startCountdown(remaining);
+      } catch {
+        this.startCountdown(0); // shows as expired — resend is still available
+      }
+    },
+    async requestResend() {
+      this.resending = true;
+      try {
+        const { data } = await api.post(`/user/verification-session/${this.verificationSessionId}/resend/`);
+        this.verificationSessionId = data.verification_session_id;
+        this.codeDigits = ["", "", "", ""];
+        const remaining = data.otp_expires_at
+          ? Math.round((new Date(data.otp_expires_at).getTime() - Date.now()) / 1000)
+          : 0;
+        this.startCountdown(remaining);
+      } catch (err) {
+        pushError(extractError(err));
+      } finally {
+        this.resending = false;
+      }
+    },
     async submitCredentials() {
-      this.errorMessage = "";
       if (!this.validateRequired({ phone_number: this.phoneNumber, password: this.password })) return;
       this.loading = true;
       try {
@@ -360,14 +413,14 @@ export default {
         });
         this.verificationSessionId = data.verification_session_id;
         this.goToStep("otp");
+        this.loadOtpCountdown();
       } catch (err) {
-        this.errorMessage = extractError(err);
+        pushError(extractError(err));
       } finally {
         this.loading = false;
       }
     },
     async submitOtp() {
-      this.errorMessage = "";
       if (!this.validateRequired({ code: this.code })) return;
       if (this.code.length < 4) {
         this.fieldErrors = { code: "Enter all 4 digits." };
@@ -385,13 +438,12 @@ export default {
         }
         await this.completeLogin();
       } catch (err) {
-        this.errorMessage = extractError(err);
+        pushError(extractError(err));
       } finally {
         this.loading = false;
       }
     },
     async submitSetPassword() {
-      this.errorMessage = "";
       if (
         !this.validateRequired({
           old_password: this.oldPassword,
@@ -418,16 +470,19 @@ export default {
         });
         await this.completeLogin();
       } catch (err) {
-        this.errorMessage = extractError(err);
+        pushError(extractError(err));
       } finally {
         this.loading = false;
       }
     },
     async completeLogin() {
       await this.authStore.fetchMe();
-      this.toast.success("Login successfully", { timeout: 2000 });
+      pushSuccess("Logged in successfully.");
       this.router.push("/app/home");
     },
+  },
+  beforeUnmount() {
+    clearInterval(this.timer);
   },
 };
 </script>

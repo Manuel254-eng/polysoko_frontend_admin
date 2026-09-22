@@ -25,18 +25,7 @@
           <div class="auth-box h-full flex flex-col justify-center">
             <div class="mobile-logo text-center mb-6 lg:hidden block">
               <router-link to="/">
-                <img
-                  :src="logo"
-                  alt=""
-                  class="mx-auto"
-                  v-if="!this.$store.themeSettingsStore.isDark"
-                />
-                <img
-                  :src="logoWhite"
-                  alt=""
-                  class="mx-auto"
-                  v-else
-                />
+                <span class="text-2xl font-bold text-slate-900 dark:text-white">Polysoko</span>
               </router-link>
             </div>
             <div class="text-center 2xl:mb-10 mb-4">
@@ -59,14 +48,12 @@
 import Signin from "../common/Signin";
 import Social from "../common/Social";
 // Image Import
-import logoWhite from "@/assets/images/logo/logo-white.svg"
-import logo from "@/assets/images/logo/logo.svg"
 import sideImg from "@/assets/images/auth/login.webp"
 
 export default {
   data () {
     return {
-      logoWhite,logo,sideImg
+      sideImg
     }
   },
   components: {

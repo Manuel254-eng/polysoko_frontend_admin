@@ -4,17 +4,11 @@
       :class="`app-header md:px-6 px-[15px]  dark:bg-slate-800 shadow-base dark:shadow-base3 bg-white ${borderSwicthClass()} ${
         this.$store.themeSettingsStore.navbarColor
       }
-      ${
-        this.$store.themeSettingsStore.menuLayout === 'horizontal' &&
-        window.width > 1280
-          ? 'py-1'
-          : 'md:py-6 py-3'
-      }
+      md:py-6 py-3
       `"
     >
       <div class="flex justify-between items-center h-full">
         <div
-          v-if="this.$store.themeSettingsStore.menuLayout === 'vertical'"
           class="flex items-center md:space-x-4 space-x-2 rtl:space-x-reverse"
         >
           <button
@@ -41,28 +35,10 @@
           <SearchModal />
         </div>
         <div
-          v-if="this.$store.themeSettingsStore.menuLayout === 'horizontal'"
-          class="flex items-center space-x-4 rtl:space-x-reverse"
-        >
-          <Logo v-if="window.width > 1280" />
-          <MobileLogo v-else />
-          <handle-mobile-menu v-if="window.width < 1280" />
-        </div>
-        <Mainnav
-          v-if="
-            this.$store.themeSettingsStore.menuLayout === 'horizontal' &&
-            window.width > 1280
-          "
-        />
-        <div
           class="nav-tools flex items-center lg:space-x-5 space-x-3 rtl:space-x-reverse"
         >
-          <LanguageVue />
           <SwitchDark />
           <MonochromeMode />
-          <Carti />
-          <Message v-if="window.width > 768" />
-          <Notification v-if="window.width > 768" />
           <Profile v-if="window.width > 768" />
           <handle-mobile-menu v-if="window.width < 768" />
         </div>
@@ -71,17 +47,11 @@
   </header>
 </template>
 <script>
-import Carti from "./Navtools/Carti.vue";
 import Profile from "./Navtools/Profile.vue";
-import Notification from "./Navtools/Notification.vue";
-import Message from "./Navtools/Message.vue";
 import SwitchDark from "./Navtools/SwitchDark.vue";
 import MonochromeMode from "./Navtools/MonochromeMode.vue";
-import Mainnav from "./horizental-nav.vue";
 import Icon from "../Icon";
 import SearchModal from "./Navtools/SearchModal.vue";
-import LanguageVue from "./Navtools/Language.vue";
-import Logo from "./Navtools/Logo.vue";
 import MobileLogo from "./Navtools/MobileLogo.vue";
 import window from "@/mixins/window";
 import HandleMobileMenu from "./Navtools/HandleMobileMenu.vue";
@@ -89,17 +59,11 @@ import HandleMobileMenu from "./Navtools/HandleMobileMenu.vue";
 export default {
   mixins: [window],
   components: {
-    Carti,
     Profile,
-    Notification,
-    Message,
     SwitchDark,
     MonochromeMode,
-    Mainnav,
     Icon,
-    LanguageVue,
     SearchModal,
-    Logo,
     MobileLogo,
     HandleMobileMenu,
   },

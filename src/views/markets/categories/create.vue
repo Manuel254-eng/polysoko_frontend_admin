@@ -63,8 +63,6 @@
             <div v-if="fieldErrors.icon" class="text-danger-500 text-sm mt-1">{{ fieldErrors.icon }}</div>
           </div>
 
-          <div v-if="errorMessage" class="text-danger-500 text-sm mb-5">{{ errorMessage }}</div>
-
           <div class="ltr:text-right rtl:text-left">
             <router-link :to="{ name: 'market-categories' }" class="btn btn-outline-dark ltr:mr-3 rtl:ml-3">Cancel</router-link>
             <Button text="Create category" btnClass="btn-dark" type="submit" :isDisabled="loading" :isLoading="loading" />
@@ -81,7 +79,7 @@ import Button from "@/components/Button";
 import Icon from "@/components/Icon";
 import Tooltip from "@/components/Tooltip";
 import { useRouter } from "vue-router";
-import { useToast } from "vue-toastification";
+import { pushSuccess, pushError } from "@/lib/alerts";
 import api from "@/lib/api";
 
 const ICON_OPTIONS = [
@@ -129,9 +127,8 @@ function extractGeneralError(err) {
 export default {
   components: { Card, Textinput, Button, Icon, Tooltip },
   setup() {
-    const toast = useToast();
     const router = useRouter();
-    return { toast, router };
+    return { router };
   },
   data() {
     return {
@@ -142,7 +139,6 @@ export default {
       // once the user edits the slug themselves, stop overwriting it from the name
       slugEditedManually: false,
       loading: false,
-      errorMessage: "",
       fieldErrors: {},
     };
   },
@@ -174,7 +170,6 @@ export default {
       return Object.keys(errors).length === 0;
     },
     async submit() {
-      this.errorMessage = "";
       if (!this.validateRequired()) return;
 
       this.loading = true;
@@ -184,11 +179,12 @@ export default {
           slug: this.slug.trim(),
           icon: this.icon.trim(),
         });
-        this.toast.success("Category created successfully", { timeout: 2000 });
+        pushSuccess("Category created successfully.");
         this.router.push({ name: "market-categories" });
       } catch (err) {
         this.fieldErrors = extractFieldErrors(err);
-        this.errorMessage = extractGeneralError(err);
+        const message = extractGeneralError(err);
+        if (message) pushError(message);
       } finally {
         this.loading = false;
       }

@@ -5,7 +5,6 @@
 
     <Sidebar
       v-if="
-        this.$store.themeSettingsStore.menuLayout === 'vertical' &&
         this.$store.themeSettingsStore.sidebarHidden === false &&
         window.width > 1280
       "
@@ -81,10 +80,7 @@ export default {
   },
   methods: {
     switchHeaderClass() {
-      if (
-        this.$store.themeSettingsStore.menuLayout === "horizontal" ||
-        this.$store.themeSettingsStore.sidebarHidden
-      ) {
+      if (this.$store.themeSettingsStore.sidebarHidden) {
         return "ltr:ml-0 rtl:mr-0";
       } else if (this.$store.themeSettingsStore.sidebarCollasp) {
         return "ltr:ml-[72px] rtl:mr-[72px]";

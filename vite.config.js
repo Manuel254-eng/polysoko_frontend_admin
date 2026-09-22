@@ -20,6 +20,16 @@ export default defineConfig({
         target: "http://127.0.0.1:8000",
         changeOrigin: true,
       },
+      // ASGI's WebSocket routes live at the host root, not under /api — see
+      // adminSocket.js's resolveWsBaseUrl(), which falls back to same-origin
+      // (window.location.host) whenever VITE_APP_API_URL is relative, as it
+      // is in .env.development. Without this, that same-origin WS request
+      // hits the Vite dev server itself, which has no such route.
+      "/ws": {
+        target: "http://127.0.0.1:8000",
+        ws: true,
+        changeOrigin: true,
+      },
     },
   },
   resolve: {

@@ -2,12 +2,10 @@
   <Dropdown classMenuItems=" w-[180px] top-[58px] ">
     <div class="flex items-center">
       <div class="flex-1 ltr:mr-[10px] rtl:ml-[10px]">
-        <div class="lg:h-8 lg:w-8 h-7 w-7 rounded-full">
-          <img
-            :src= "profileImg"
-            alt=""
-            class="block w-full h-full object-cover rounded-full"
-          />
+        <div
+          class="lg:h-8 lg:w-8 h-7 w-7 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 flex items-center justify-center"
+        >
+          <Icon icon="heroicons-outline:user" class="text-lg" />
         </div>
       </div>
       <div
@@ -15,7 +13,7 @@
       >
         <span
           class="overflow-hidden text-ellipsis whitespace-nowrap w-[85px] block"
-          >Albert Flores</span
+          >{{ displayName }}</span
         >
         <span class="text-base inline-block ltr:ml-[10px] rtl:mr-[10px]"
           ><Icon icon="heroicons-outline:chevron-down"></Icon
@@ -49,7 +47,6 @@
 import { MenuItem } from "@headlessui/vue";
 import Dropdown from "@/components/Dropdown";
 import Icon from "@/components/Icon";
-import profileImg from "@/assets/images/all-img/user.png"
 import { useAuthStore } from "@/store/auth";
 export default {
   components: {
@@ -63,57 +60,7 @@ export default {
   },
   data() {
     return {
-      profileImg,
       ProfileMenu: [
-        {
-          label: "Profile",
-          icon: "heroicons-outline:user",
-          link: () => {
-            this.$router.push("profile");
-          },
-        },
-        {
-          label: "Chat",
-          icon: "heroicons-outline:chat",
-          link: () => {
-            this.$router.push("chat");
-          },
-        },
-        {
-          label: "Email",
-          icon: "heroicons-outline:mail",
-          link: () => {
-            this.$router.push("email");
-          },
-        },
-        {
-          label: "Todo",
-          icon: "heroicons-outline:clipboard-check",
-          link: () => {
-            this.$router.push("todo");
-          },
-        },
-        {
-          label: "Settings",
-          icon: "heroicons-outline:cog",
-          link: () => {
-            this.$router.push("settings");
-          },
-        },
-        {
-          label: "Price",
-          icon: "heroicons-outline:credit-card",
-          link: () => {
-            this.$router.push("pricing");
-          },
-        },
-        {
-          label: "Faq",
-          icon: "heroicons-outline:information-circle",
-          link: () => {
-            this.$router.push("faq");
-          },
-        },
         {
           label: "Logout",
           icon: "heroicons-outline:login",
@@ -124,6 +71,17 @@ export default {
         },
       ],
     };
+  },
+  computed: {
+    // first_name/last_name are blank=True on the backend — an older staff
+    // account may never have had them filled in, so this falls back to the
+    // phone number rather than showing a blank/undefined name.
+    displayName() {
+      const user = this.authStore.user;
+      if (!user) return "";
+      const fullName = [user.first_name, user.last_name].filter(Boolean).join(" ");
+      return fullName || `${user.country_code}${user.phone_number}`;
+    },
   },
 };
 </script>

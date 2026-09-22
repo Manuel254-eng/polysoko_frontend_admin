@@ -117,7 +117,7 @@ import Modal from "@/components/Modal/Modal";
 import Button from "@/components/Button";
 import { MenuItem } from "@headlessui/vue";
 import { useRouter } from "vue-router";
-import { useToast } from "vue-toastification";
+import { pushSuccess, pushError } from "@/lib/alerts";
 import api from "@/lib/api";
 
 function extractError(err) {
@@ -131,8 +131,7 @@ export default {
   components: { Card, InputGroup, Dropdown, Icon, Pagination, Modal, Button, MenuItem },
   setup() {
     const router = useRouter();
-    const toast = useToast();
-    return { router, toast };
+    return { router };
   },
   data() {
     return {
@@ -219,9 +218,9 @@ export default {
         const { data } = await api.patch(`/market/${id}/`, { is_published: true });
         const market = this.markets.find((m) => m.id === id);
         if (market) market.is_published = data.is_published;
-        this.toast.success("Market published", { timeout: 2000 });
+        pushSuccess("Market published.");
       } catch (err) {
-        this.toast.error(extractError(err), { timeout: 3000 });
+        pushError(extractError(err));
       } finally {
         this.publishingId = null;
       }

@@ -79,8 +79,6 @@
             <Checkbox v-model="isActive" :checked="isActive" label="Active" name="is_active" />
           </div>
 
-          <div v-if="errorMessage" class="text-danger-500 text-sm mb-5">{{ errorMessage }}</div>
-
           <div class="ltr:text-right rtl:text-left">
             <router-link :to="{ name: 'users' }" class="btn btn-outline-dark ltr:mr-3 rtl:ml-3">Cancel</router-link>
             <Button text="Create user" btnClass="btn-dark" type="submit" :isDisabled="loading" :isLoading="loading" />
@@ -97,7 +95,7 @@ import InputGroup from "@/components/InputGroup";
 import Checkbox from "@/components/Checkbox";
 import Button from "@/components/Button";
 import { useRouter } from "vue-router";
-import { useToast } from "vue-toastification";
+import { pushSuccess, pushError } from "@/lib/alerts";
 import api from "@/lib/api";
 
 function extractFieldErrors(err) {
@@ -122,9 +120,8 @@ function extractGeneralError(err) {
 export default {
   components: { Card, Textinput, InputGroup, Checkbox, Button },
   setup() {
-    const toast = useToast();
     const router = useRouter();
-    return { toast, router };
+    return { router };
   },
   data() {
     return {
@@ -139,7 +136,6 @@ export default {
       roles: [],
       loading: false,
       loadingRoles: true,
-      errorMessage: "",
       fieldErrors: {},
     };
   },
@@ -181,7 +177,7 @@ export default {
       const { data } = await api.get("/rbac/roles/");
       this.roles = data;
     } catch {
-      this.errorMessage = "Could not load roles. Please refresh and try again.";
+      pushError("Could not load roles. Please refresh and try again.");
     } finally {
       this.loadingRoles = false;
     }
@@ -214,7 +210,6 @@ export default {
       return Object.keys(errors).length === 0;
     },
     async submit() {
-      this.errorMessage = "";
       if (!this.validateRequired()) return;
       if (!/^\S+@\S+\.\S+$/.test(this.email)) {
         this.fieldErrors = { email: "Enter a valid email address." };
@@ -238,11 +233,12 @@ export default {
           role: this.role,
           is_active: this.isActive,
         });
-        this.toast.success("User created successfully", { timeout: 2000 });
+        pushSuccess("User created successfully.");
         this.router.push({ name: "users" });
       } catch (err) {
         this.fieldErrors = extractFieldErrors(err);
-        this.errorMessage = extractGeneralError(err);
+        const message = extractGeneralError(err);
+        if (message) pushError(message);
       } finally {
         this.loading = false;
       }
