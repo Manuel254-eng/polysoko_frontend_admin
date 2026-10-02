@@ -33,8 +33,16 @@
             </dd>
           </div>
           <div>
-            <dt class="text-xs uppercase text-slate-400 dark:text-slate-500 font-medium mb-1">Balance (KES)</dt>
-            <dd class="text-slate-700 dark:text-slate-200 font-medium">{{ formatAmount(account.balance) }}</dd>
+            <dt class="text-xs uppercase text-slate-400 dark:text-slate-500 font-medium mb-1" title="Sum of sign-adjusted credit/debit entries for this GL account — meaningful when combined with every other account to check Assets = Liabilities + Equity + Revenue - Expenses, not as a standalone 'money held here' figure.">
+              Trial Balance (KES)
+            </dt>
+            <dd class="text-slate-700 dark:text-slate-200 font-medium">{{ formatAmount(account.trial_balance) }}</dd>
+          </div>
+          <div>
+            <dt class="text-xs uppercase text-slate-400 dark:text-slate-500 font-medium mb-1" title="The real money this account represents right now — summed across every market pool or user wallet for that kind of account, or the platform reserve's own balance for the reserve-derived accounts, which all share one ledger.">
+              Current Balance (KES)
+            </dt>
+            <dd class="text-slate-700 dark:text-slate-200 font-medium">{{ formatAmount(account.current_balance) }}</dd>
           </div>
         </dl>
       </div>
@@ -43,6 +51,9 @@
     <Card v-if="!loading && !errorMessage" noborder>
       <div class="pb-6">
         <h5>Activity</h5>
+        <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">
+          Running balance is that entry's own ledger balance (per market for Market Liquidity, per user for User Wallet) — not a running total for this GL account across all of them.
+        </p>
       </div>
 
       <div v-if="rows.length === 0" class="text-slate-500 dark:text-slate-400 text-sm py-10 text-center">
@@ -56,7 +67,10 @@
         :pagination-options="{ enabled: true, perPage }"
       >
         <template v-slot:table-row="props">
-          <span v-if="props.column.field === 'debit' || props.column.field === 'credit' || props.column.field === 'amount'" class="block w-full text-right pr-4">
+          <span
+            v-if="['debit', 'credit', 'amount', 'ledger_balance'].includes(props.column.field)"
+            class="block w-full text-right pr-4"
+          >
             {{ formatAmount(props.row[props.column.field]) }}
           </span>
           <span v-else-if="props.column.field === 'ledger'" class="text-sm text-slate-600 dark:text-slate-300">
@@ -143,6 +157,7 @@ export default {
         { label: "Debit (KES)", field: "debit", type: "number" },
         { label: "Credit (KES)", field: "credit", type: "number" },
         { label: "Amount (KES)", field: "amount", type: "number" },
+        { label: "Running Balance (KES)", field: "ledger_balance", type: "number" },
       ],
     };
   },

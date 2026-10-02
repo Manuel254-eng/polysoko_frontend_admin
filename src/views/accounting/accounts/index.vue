@@ -34,8 +34,11 @@
               {{ props.row.category }}
             </span>
           </span>
-          <span v-else-if="props.column.field === 'balance'" class="block w-full text-right pr-4">
-            {{ formatBalance(props.row.balance) }}
+          <span
+            v-else-if="props.column.field === 'trial_balance' || props.column.field === 'current_balance'"
+            class="block w-full text-right pr-4"
+          >
+            {{ formatBalance(props.row[props.column.field]) }}
           </span>
           <span v-else-if="props.column.field === 'action'">
             <router-link
@@ -109,7 +112,8 @@ export default {
         { label: "Code", field: "code" },
         { label: "Account", field: "name" },
         { label: "Category", field: "category" },
-        { label: "Balance (KES)", field: "balance", type: "number" },
+        { label: "Trial Balance (KES)", field: "trial_balance", type: "number" },
+        { label: "Current Balance (KES)", field: "current_balance", type: "number" },
         { label: "", field: "action", sortable: false },
       ],
     };
@@ -120,7 +124,8 @@ export default {
         code: account.code,
         name: account.name,
         category: account.category,
-        balance: account.balance,
+        trial_balance: account.trial_balance,
+        current_balance: account.current_balance,
       }));
     },
   },

@@ -121,18 +121,18 @@
           <template v-if="!isCustom">
             <div class="lg:grid-cols-3 md:grid-cols-2 grid-cols-1 grid gap-5 mb-5">
               <Textinput
-                label="Yes probability (0–1)"
+                label="Yes probability (%)"
                 type="number"
                 name="yes_probability"
-                v-model="yesProbability"
+                v-model="yesProbabilityPercent"
                 :error="detailErrors.yes_probability"
-                step="0.0001"
+                step="0.01"
                 min="0"
-                max="1"
+                max="100"
                 classInput="h-[48px]"
               />
               <Textinput
-                label="No probability"
+                label="No probability (%)"
                 type="text"
                 name="no_probability"
                 :modelValue="noProbabilityPreview"
@@ -179,9 +179,9 @@
               <label class="input-label mb-0">Choices</label>
               <span
                 class="text-sm font-medium"
-                :class="Math.abs(choicesTotal - 1) <= 0.001 ? 'text-success-500' : 'text-danger-500'"
+                :class="Math.abs(choicesTotal - 100) <= 0.1 ? 'text-success-500' : 'text-danger-500'"
               >
-                Total: {{ choicesTotal.toFixed(4) }} / 1.0000
+                Total: {{ choicesTotal.toFixed(2) }}% / 100.00%
               </span>
             </div>
 
@@ -199,13 +199,13 @@
               <div class="w-36">
                 <Textinput
                   type="number"
-                  placeholder="0.0000"
+                  placeholder="0.00"
                   :name="`choice_probability_${index}`"
                   v-model="choice.probability"
                   :error="choiceErrors[index]?.probability"
-                  step="0.0001"
+                  step="0.01"
                   min="0"
-                  max="1"
+                  max="100"
                   classInput="h-[48px]"
                 />
               </div>
@@ -284,6 +284,14 @@ function toDateTimeLocal(date) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+// The UI takes probabilities as percentages (0-100); the backend's
+// yes_probability/MarketChoice.probability fields are 0-1 decimals with 4
+// decimal places, so this is where that conversion happens, once, right
+// before a payload goes out.
+function toDecimalProbability(percent) {
+  return (Number(percent) / 100).toFixed(4);
+}
+
 export default {
   components: { Card, Textinput, Textarea, Button, Icon, Radio },
   setup() {
@@ -310,7 +318,7 @@ export default {
 
       isCustom: false,
 
-      yesProbability: "0.5",
+      yesProbabilityPercent: "50",
       liquidity: "",
       detailsLoading: false,
       detailErrors: {},
@@ -362,10 +370,13 @@ export default {
       };
     },
     noProbabilityPreview() {
-      const yes = Number(this.yesProbability);
+      const yes = Number(this.yesProbabilityPercent);
       if (Number.isNaN(yes)) return "—";
-      return (1 - yes).toFixed(4);
+      return (100 - yes).toFixed(2);
     },
+    // Sums the percentage values shown/entered in the UI — converted to the
+    // 0-1 decimals the backend expects only at submit time, in
+    // toDecimalProbability().
     choicesTotal() {
       return this.choices.reduce((sum, choice) => sum + (Number(choice.probability) || 0), 0);
     },
@@ -389,7 +400,7 @@ export default {
     description() {
       this.clearFieldError("description");
     },
-    yesProbability() {
+    yesProbabilityPercent() {
       this.clearDetailError("yes_probability");
     },
     liquidity() {
@@ -538,7 +549,7 @@ export default {
       this.detailsLoading = true;
       try {
         await api.post(`/market/${this.createdMarketId}/details/`, {
-          yes_probability: this.yesProbability,
+          yes_probability: toDecimalProbability(this.yesProbabilityPercent),
           liquidity: this.liquidity,
         });
         pushSuccess("Market created successfully.");
@@ -559,9 +570,10 @@ export default {
       this.choices.splice(index, 1);
       delete this.choiceErrors[index];
     },
-    // Mirrors the backend's tolerance (MarketChoiceBulkSerializer.SUM_TOLERANCE)
-    // so a client-side pass and the server's own check agree on what "adds up
-    // to 1" means — thirds (0.3333 + 0.3333 + 0.3334) must pass both.
+    // Mirrors the backend's tolerance (MarketChoiceBulkSerializer.SUM_TOLERANCE,
+    // 0.001 in its 0-1 decimal terms — 0.1 once scaled up to this form's
+    // percentages) so a client-side pass and the server's own check agree on
+    // what "adds up to 100%" means — thirds (33.33 + 33.33 + 33.34) must pass both.
     validateChoices() {
       const errors = {};
       this.choices.forEach((choice, index) => {
@@ -575,8 +587,8 @@ export default {
       this.choiceErrors = errors;
       if (Object.keys(errors).length > 0) return false;
 
-      if (Math.abs(this.choicesTotal - 1) > 0.001) {
-        pushError(`Probabilities must add up to 1 — these add up to ${this.choicesTotal.toFixed(4)}.`);
+      if (Math.abs(this.choicesTotal - 100) > 0.1) {
+        pushError(`Probabilities must add up to 100% — these add up to ${this.choicesTotal.toFixed(2)}%.`);
         return false;
       }
       return true;
@@ -596,7 +608,7 @@ export default {
         await api.post(`/market/${this.createdMarketId}/choices/`, {
           choices: this.choices.map((choice) => ({
             label: choice.label.trim(),
-            probability: choice.probability,
+            probability: toDecimalProbability(choice.probability),
           })),
           liquidity: this.liquidity,
         });
