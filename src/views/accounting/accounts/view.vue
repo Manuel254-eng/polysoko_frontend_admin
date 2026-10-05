@@ -103,14 +103,9 @@
 import Card from "@/components/Card";
 import Pagination from "@/components/Pagination";
 import api from "@/lib/api";
+import { extractError } from "@/lib/errors";
 
-function extractError(err) {
-  const data = err?.response?.data;
-  if (!data) return "Something went wrong. Please try again.";
-  if (err?.response?.status === 404) return "This account could not be found.";
-  if (data.detail) return data.detail;
-  return Object.values(data).flat().join(" ");
-}
+const NOT_FOUND = { notFoundMessage: "This account could not be found." };
 
 const CATEGORY_BADGE_CLASS = {
   asset: "text-info-500 bg-info-500",
@@ -176,7 +171,7 @@ export default {
       this.account = data;
       this.activity = data.activity;
     } catch (err) {
-      this.errorMessage = extractError(err);
+      this.errorMessage = extractError(err, NOT_FOUND);
     } finally {
       this.loading = false;
     }

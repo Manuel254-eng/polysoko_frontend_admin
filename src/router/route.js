@@ -62,6 +62,11 @@ const routes = [
         component: () => import("@/views/markets/categories/create.vue"),
       },
       {
+        path: "markets/:id/edit",
+        name: "markets-edit",
+        component: () => import("@/views/markets/create.vue"),
+      },
+      {
         path: "markets/:id",
         name: "market-details",
         component: () => import("@/views/markets/view.vue"),
@@ -73,6 +78,21 @@ const routes = [
         path: "markets/resolution-requests",
         name: "market-resolution-requests",
         component: () => import("@/views/markets/resolution-requests/index.vue"),
+      },
+      {
+        path: "markets/combos",
+        name: "market-combos",
+        component: () => import("@/views/markets/combos/index.vue"),
+      },
+      {
+        path: "markets/combos/create",
+        name: "market-combos-create",
+        component: () => import("@/views/markets/combos/create.vue"),
+      },
+      {
+        path: "markets/combos/:id/edit",
+        name: "market-combos-edit",
+        component: () => import("@/views/markets/combos/create.vue"),
       },
       {
         path: "bets",

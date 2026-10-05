@@ -109,13 +109,7 @@ import Button from "@/components/Button";
 import Textinput from "@/components/Textinput";
 import { pushSuccess, pushError } from "@/lib/alerts";
 import api from "@/lib/api";
-
-function extractError(err) {
-  const data = err?.response?.data;
-  if (!data) return "Something went wrong. Please try again.";
-  if (data.detail) return data.detail;
-  return Object.values(data).flat().join(" ");
-}
+import { extractError } from "@/lib/errors";
 
 const STATUS_BADGE_CLASS = {
   pending: "text-warning-500 bg-warning-500",

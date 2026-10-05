@@ -154,13 +154,8 @@ import Icon from "@/components/Icon";
 import { useRouter } from "vue-router";
 import { pushSuccess, pushError } from "@/lib/alerts";
 import api from "@/lib/api";
+import { extractError } from "@/lib/errors";
 import { useAuthStore } from "@/store/auth";
-
-function extractError(err) {
-  const data = err?.response?.data;
-  if (!data) return "Something went wrong. Please try again.";
-  return Object.values(data).flat().join(" ");
-}
 
 // The rules behind the live strength checklist below — kept as one list so the
 // checklist UI and the reject-before-submit check can't drift apart.

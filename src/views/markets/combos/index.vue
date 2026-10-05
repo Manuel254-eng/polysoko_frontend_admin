@@ -2,11 +2,11 @@
   <div>
     <Card noborder>
       <div class="md:flex justify-between pb-6 md:space-y-0 space-y-3 items-center">
-        <h5>Markets</h5>
+        <h5>Combos</h5>
         <div class="flex items-center gap-3">
           <InputGroup v-model="searchTerm" placeholder="Search" type="text" prependIcon="heroicons-outline:search" merged />
-          <router-link :to="{ name: 'markets-create' }" class="btn btn-dark btn-sm whitespace-nowrap">
-            Add market
+          <router-link :to="{ name: 'market-combos-create' }" class="btn btn-dark btn-sm whitespace-nowrap">
+            Create combo
           </router-link>
         </div>
       </div>
@@ -19,7 +19,7 @@
       </div>
       <template v-else>
         <div v-if="rows.length === 0" class="text-slate-500 dark:text-slate-400 text-sm py-10 text-center">
-          No published markets yet.
+          No combos yet.
         </div>
         <template v-else>
           <vue-good-table
@@ -41,15 +41,14 @@
               <span v-if="props.column.field === 'title'" class="text-slate-600 dark:text-slate-300 font-medium">
                 {{ props.row.title }}
               </span>
-              <span v-else-if="props.column.field === 'is_published'" class="block w-full">
+              <span v-else-if="props.column.field === 'status'" class="block w-full">
                 <span
                   class="inline-block px-3 min-w-[90px] text-center mx-auto py-1 rounded-[999px] bg-opacity-25"
-                  :class="props.row.is_published ? 'text-success-500 bg-success-500' : 'text-warning-500 bg-warning-500'"
+                  :class="props.row.status === 'published' ? 'text-success-500 bg-success-500' : 'text-warning-500 bg-warning-500'"
                 >
-                  {{ props.row.is_published ? "Published" : "Draft" }}
+                  {{ props.row.status === "published" ? "Published" : "Draft" }}
                 </span>
               </span>
-              <span v-else-if="props.column.field === 'status'" class="capitalize">{{ props.row.status }}</span>
               <span v-else-if="props.column.field === 'action'">
                 <Dropdown classMenuItems=" w-[140px]">
                   <span class="text-xl"><Icon icon="heroicons-outline:dots-vertical" /></span>
@@ -89,11 +88,11 @@
       </template>
     </Card>
 
-    <Modal ref="publishModal" title="Publish market" labelClass="hidden" centered>
+    <Modal ref="publishModal" title="Publish combo" labelClass="hidden" centered>
       <h4 class="font-medium text-lg mb-3 text-slate-900 dark:text-white">Are you sure?</h4>
       <div class="text-base text-slate-600 dark:text-slate-300">
-        Publishing "<strong>{{ pendingPublish?.title }}</strong>" makes it visible to everyone. This can't be undone
-        from here.
+        Publishing "<strong>{{ pendingPublish?.title }}</strong>" makes it visible to everyone, and it can't be edited
+        afterwards.
       </div>
       <template v-slot:footer>
         <Button text="Cancel" btnClass="btn-outline-dark" @click="$refs.publishModal.closeModal()" />
@@ -131,70 +130,53 @@ export default {
     return {
       loading: true,
       errorMessage: "",
-      markets: [],
-      categories: [],
+      combos: [],
       searchTerm: "",
       count: 0,
-      next: null,
-      previous: null,
       page: 1,
       // matches MarketPagination.page_size on the backend
       perPage: 20,
       publishingId: null,
       pendingPublish: null,
-      baseActions: [
-        { name: "view", icon: "heroicons-outline:eye" },
-        { name: "edit", icon: "heroicons:pencil-square" },
-        { name: "delete", icon: "heroicons-outline:trash" },
-      ],
       columns: [
+        { label: "Code", field: "code" },
         { label: "Title", field: "title" },
-        { label: "Category", field: "category" },
+        { label: "Markets", field: "items_count", type: "number" },
         { label: "Status", field: "status" },
-        { label: "Published", field: "is_published" },
-        { label: "Resolution date", field: "resolution_date" },
+        { label: "Created", field: "created_at" },
         { label: "Action", field: "action", sortable: false },
       ],
     };
   },
   computed: {
-    categoryNameById() {
-      return Object.fromEntries(this.categories.map((category) => [category.id, category.name]));
-    },
     rows() {
-      return this.markets.map((market) => ({
-        id: market.id,
-        title: market.title,
-        category: this.categoryNameById[market.category] || "—",
-        status: market.status,
-        is_published: market.is_published,
-        resolution_date: new Date(market.resolution_date).toLocaleString(),
+      return this.combos.map((combo) => ({
+        id: combo.id,
+        code: combo.code,
+        title: combo.title,
+        items_count: combo.items_count,
+        status: combo.status,
+        created_at: new Date(combo.created_at).toLocaleString(),
       }));
     },
   },
   async mounted() {
-    try {
-      const { data } = await api.get("/market/categories/");
-      this.categories = data;
-    } catch {
-      // categories are only used for display — a failed lookup just falls back to "—"
-    }
     await this.loadPage(1);
   },
   methods: {
-    // "Publish" and "edit" only make sense for a draft — a published market is locked.
+    // A published combo is locked — only drafts can be edited or published.
     rowActions(row) {
-      const [view, edit, ...rest] = this.baseActions;
-      if (row.is_published) return [view, ...rest];
-      return [view, { name: "publish", icon: "heroicons-outline:check-circle" }, edit, ...rest];
+      const remove = { name: "delete", icon: "heroicons-outline:trash" };
+      if (row.status === "published") return [remove];
+      return [
+        { name: "publish", icon: "heroicons-outline:check-circle" },
+        { name: "edit", icon: "heroicons:pencil-square" },
+        remove,
+      ];
     },
     handleAction(name, row) {
-      if (name === "view") {
-        this.router.push({ name: "market-details", params: { id: row.id } });
-        return;
-      }
       if (name === "edit") {
-        this.router.push({ name: "markets-edit", params: { id: row.id } });
+        this.router.push({ name: "market-combos-edit", params: { id: row.id } });
         return;
       }
       if (name === "publish") {
@@ -205,18 +187,15 @@ export default {
       // delete is not wired yet
     },
     async confirmPublish() {
-      if (!this.pendingPublish) return;
-      await this.publishMarket(this.pendingPublish.id);
-      this.$refs.publishModal.closeModal();
-    },
-    async publishMarket(id) {
-      if (this.publishingId) return;
+      if (!this.pendingPublish || this.publishingId) return;
+      const { id } = this.pendingPublish;
       this.publishingId = id;
       try {
-        const { data } = await api.patch(`/market/${id}/`, { is_published: true });
-        const market = this.markets.find((m) => m.id === id);
-        if (market) market.is_published = data.is_published;
-        pushSuccess("Market published.");
+        const { data } = await api.post(`/market/combos/${id}/publish/`);
+        const combo = this.combos.find((c) => c.id === id);
+        if (combo) combo.status = data.status;
+        pushSuccess("Combo published.");
+        this.$refs.publishModal.closeModal();
       } catch (err) {
         pushError(extractError(err));
       } finally {
@@ -227,11 +206,9 @@ export default {
       this.loading = true;
       this.errorMessage = "";
       try {
-        const { data } = await api.get("/market/", { params: { page } });
-        this.markets = data.results;
+        const { data } = await api.get("/market/combos/", { params: { page } });
+        this.combos = data.results;
         this.count = data.count;
-        this.next = data.next;
-        this.previous = data.previous;
         this.page = page;
       } catch (err) {
         this.errorMessage = extractError(err);

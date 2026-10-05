@@ -99,13 +99,7 @@ import Icon from "@/components/Icon";
 import Pagination from "@/components/Pagination";
 import { MenuItem } from "@headlessui/vue";
 import api from "@/lib/api";
-
-function extractError(err) {
-  const data = err?.response?.data;
-  if (!data) return "Something went wrong. Please try again.";
-  if (data.detail) return data.detail;
-  return Object.values(data).flat().join(" ");
-}
+import { extractError } from "@/lib/errors";
 
 function initialsOf(name) {
   const parts = name.trim().split(/\s+/).filter(Boolean);

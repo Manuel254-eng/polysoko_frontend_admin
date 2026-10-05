@@ -207,14 +207,9 @@ import Radio from "@/components/Radio";
 import Textinput from "@/components/Textinput";
 import { pushSuccess, pushError } from "@/lib/alerts";
 import api from "@/lib/api";
+import { extractError } from "@/lib/errors";
 
-function extractError(err) {
-  const data = err?.response?.data;
-  if (!data) return "Something went wrong. Please try again.";
-  if (err?.response?.status === 404) return "This market could not be found.";
-  if (data.detail) return data.detail;
-  return Object.values(data).flat().join(" ");
-}
+const NOT_FOUND = { notFoundMessage: "This market could not be found." };
 
 export default {
   components: { Card, Modal, Button, Radio, Textinput },
@@ -253,7 +248,7 @@ export default {
         await this.loadPendingRequest();
       }
     } catch (err) {
-      this.errorMessage = extractError(err);
+      this.errorMessage = extractError(err, NOT_FOUND);
     } finally {
       this.loading = false;
     }
@@ -271,7 +266,7 @@ export default {
         pushSuccess("Market closed.");
         this.$refs.closeModal.closeModal();
       } catch (err) {
-        pushError(extractError(err));
+        pushError(extractError(err, NOT_FOUND));
       } finally {
         this.closing = false;
       }
@@ -287,7 +282,7 @@ export default {
         const { data } = await api.get(`/market/${this.market.id}/`);
         this.market = data;
       } catch (err) {
-        pushError(extractError(err));
+        pushError(extractError(err, NOT_FOUND));
         return;
       }
       if (this.market.status !== "closed") {
@@ -317,7 +312,7 @@ export default {
         pushSuccess("Resolution submitted for approval.");
         this.$refs.resolveModal.closeModal();
       } catch (err) {
-        pushError(extractError(err));
+        pushError(extractError(err, NOT_FOUND));
       } finally {
         this.resolving = false;
       }
@@ -332,7 +327,7 @@ export default {
       try {
         await this.loadPendingRequest();
       } catch (err) {
-        pushError(extractError(err));
+        pushError(extractError(err, NOT_FOUND));
       } finally {
         this.refreshingPending = false;
       }
@@ -347,7 +342,7 @@ export default {
         this.pendingRequest = null;
         pushSuccess("Market resolved.");
       } catch (err) {
-        pushError(extractError(err));
+        pushError(extractError(err, NOT_FOUND));
       } finally {
         this.approving = false;
       }
@@ -364,7 +359,7 @@ export default {
         pushSuccess("Resolution rejected.");
         this.$refs.rejectModal.closeModal();
       } catch (err) {
-        pushError(extractError(err));
+        pushError(extractError(err, NOT_FOUND));
       } finally {
         this.rejecting = false;
       }

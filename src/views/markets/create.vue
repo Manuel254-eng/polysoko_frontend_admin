@@ -2,9 +2,9 @@
   <div>
     <Card bodyClass="p-0">
       <header class="border-b px-4 border-slate-100 dark:border-slate-700 pt-4 pb-3 flex justify-between items-center">
-        <h6 class="card-title mb-0">Add Market</h6>
+        <h6 class="card-title mb-0">{{ isEdit ? "Edit Market" : "Add Market" }}</h6>
       </header>
-      <div class="px-6 pt-6">
+      <div v-if="!isEdit" class="px-6 pt-6">
         <div class="flex items-center max-w-xs mx-auto mb-2">
           <div class="flex flex-col items-center">
             <div
@@ -106,14 +106,31 @@
           <div class="mb-5">
             <label class="input-label">Market type</label>
             <div class="flex items-center gap-6">
-              <Radio v-model="isCustom" name="market-type" :value="false" label="Default (Yes / No)" />
-              <Radio v-model="isCustom" name="market-type" :value="true" label="Custom outcomes" />
+              <Radio v-model="isCustom" name="market-type" :value="false" label="Default (Yes / No)" :disabled="isEdit" />
+              <Radio v-model="isCustom" name="market-type" :value="true" label="Custom outcomes" :disabled="isEdit" />
             </div>
+            <span v-if="isEdit" class="block text-secondary-500 font-light leading-4 text-xs mt-2">
+              The type can't change once the market's liquidity or choices are set up.
+            </span>
+          </div>
+
+          <div class="mb-5">
+            <label class="input-label">Visibility</label>
+            <Checkbox v-model="isComboOnly" :checked="isComboOnly" label="Combo only" name="is_combo_only" />
+            <span class="block text-secondary-500 font-light leading-4 text-xs mt-2">
+              Hidden from the public market list — only offered as a leg in combos.
+            </span>
           </div>
 
           <div class="ltr:text-right rtl:text-left">
             <router-link :to="{ name: 'markets' }" class="btn btn-outline-dark ltr:mr-3 rtl:ml-3">Cancel</router-link>
-            <Button text="Next" btnClass="btn-dark" type="submit" :isDisabled="loading" :isLoading="loading" />
+            <Button
+              :text="isEdit ? 'Save changes' : 'Next'"
+              btnClass="btn-dark"
+              type="submit"
+              :isDisabled="loading || editLoading"
+              :isLoading="loading"
+            />
           </div>
         </form>
 
@@ -141,12 +158,11 @@
               />
               <Textinput
                 label="Liquidity (KES)"
-                type="number"
                 name="liquidity"
                 v-model="liquidity"
                 :error="detailErrors.liquidity"
-                step="0.01"
-                min="0.01"
+                isMask
+                :options="AMOUNT_MASK"
                 classInput="h-[48px]"
                 placeholder="0.01"
               />
@@ -160,12 +176,12 @@
             <div class="lg:grid-cols-2 grid-cols-1 grid gap-5 mb-5">
               <Textinput
                 label="Max Loss Budget (KES)"
-                type="number"
                 name="choice_liquidity"
                 v-model="liquidity"
                 :error="detailErrors.liquidity"
-                step="0.01"
-                min="0.01"
+                isMask
+                :options="AMOUNT_MASK"
+                placeholder="0.00"
                 classInput="h-[48px]"
               />
             </div>
@@ -254,28 +270,12 @@ import Textarea from "@/components/Textarea";
 import Button from "@/components/Button";
 import Icon from "@/components/Icon";
 import Radio from "@/components/Radio";
+import Checkbox from "@/components/Checkbox";
 import { useRouter } from "vue-router";
 import { pushSuccess, pushError } from "@/lib/alerts";
 import api from "@/lib/api";
-
-function extractFieldErrors(err) {
-  const data = err?.response?.data;
-  if (!data || typeof data !== "object") return {};
-  const fields = {};
-  for (const [key, value] of Object.entries(data)) {
-    if (key === "non_field_errors" || key === "detail") continue;
-    fields[key] = Array.isArray(value) ? value.join(" ") : String(value);
-  }
-  return fields;
-}
-
-function extractGeneralError(err) {
-  const data = err?.response?.data;
-  if (!data) return "Something went wrong. Please try again.";
-  if (data.non_field_errors) return data.non_field_errors.join(" ");
-  if (data.detail) return data.detail;
-  return "";
-}
+import { extractFieldErrors, extractGeneralError } from "@/lib/errors";
+import { AMOUNT_MASK } from "@/constant/masks";
 
 // Format a Date as the "YYYY-MM-DDTHH:mm" string datetime-local inputs expect
 // for their value/min/max attributes (local time, not UTC).
@@ -293,7 +293,7 @@ function toDecimalProbability(percent) {
 }
 
 export default {
-  components: { Card, Textinput, Textarea, Button, Icon, Radio },
+  components: { Card, Textinput, Textarea, Button, Icon, Radio, Checkbox },
   setup() {
     const router = useRouter();
     return { router };
@@ -302,6 +302,10 @@ export default {
     return {
       step: 1,
       createdMarketId: null,
+      // Edit mode only: the dates as loaded, so unchanged (possibly already
+      // past) dates aren't re-sent and tripped by the no-backdating check.
+      originalDates: null,
+      editLoading: false,
 
       title: "",
       description: "",
@@ -317,9 +321,11 @@ export default {
       fieldErrors: {},
 
       isCustom: false,
+      isComboOnly: false,
 
       yesProbabilityPercent: "50",
       liquidity: "",
+      AMOUNT_MASK,
       detailsLoading: false,
       detailErrors: {},
 
@@ -331,6 +337,9 @@ export default {
     };
   },
   computed: {
+    isEdit() {
+      return this.$route.name === "markets-edit";
+    },
     // altInput shows the human-readable altFormat text; the underlying
     // v-model value keeps dateFormat so it stays a drop-in for
     // new Date(...)/toDateTimeLocal() elsewhere in this component.
@@ -414,6 +423,7 @@ export default {
     } catch {
       pushError("Could not load categories. Please refresh and try again.");
     }
+    if (this.isEdit) await this.loadForEdit();
   },
   methods: {
     clearFieldError(name) {
@@ -438,6 +448,9 @@ export default {
     },
     // Backstop for validateRequired()'s min attribute — some browsers don't
     // enforce datetime-local's min against a manually-typed value.
+    dateChanged(field, value) {
+      return !this.originalDates || this.originalDates[field] !== value;
+    },
     validateNotBackdated() {
       // datetime-local only carries minute precision, so compare against the
       // start of the current minute — otherwise a value equal to "now" as
@@ -445,13 +458,13 @@ export default {
       const now = new Date();
       now.setSeconds(0, 0);
       const errors = {};
-      if (this.resolutionDate && new Date(this.resolutionDate) < now) {
+      if (this.resolutionDate && this.dateChanged("resolution_date", this.resolutionDate) && new Date(this.resolutionDate) < now) {
         errors.resolution_date = "Resolution date can't be in the past.";
       }
-      if (this.openAt && new Date(this.openAt) < now) {
+      if (this.openAt && this.dateChanged("open_at", this.openAt) && new Date(this.openAt) < now) {
         errors.open_at = "Opening time can't be in the past.";
       }
-      if (this.closeAt && new Date(this.closeAt) < now) {
+      if (this.closeAt && this.dateChanged("close_at", this.closeAt) && new Date(this.closeAt) < now) {
         errors.close_at = "Closing time can't be in the past.";
       }
       if (Object.keys(errors).length > 0) {
@@ -497,7 +510,18 @@ export default {
           open_at: new Date(this.openAt).toISOString(),
           close_at: new Date(this.closeAt).toISOString(),
           is_custom: this.isCustom,
+          is_combo_only: this.isComboOnly,
         };
+        if (this.isEdit) {
+          delete payload.is_custom;
+          if (!this.dateChanged("resolution_date", this.resolutionDate)) delete payload.resolution_date;
+          if (!this.dateChanged("open_at", this.openAt)) delete payload.open_at;
+          if (!this.dateChanged("close_at", this.closeAt)) delete payload.close_at;
+          await api.patch(`/market/${this.createdMarketId}/`, payload);
+          pushSuccess("Market updated successfully.");
+          this.router.push({ name: "markets" });
+          return;
+        }
         // Once step 1 has already created the market (e.g. after coming back
         // from step 2), re-submitting updates that same market instead of
         // creating a second one.
@@ -518,19 +542,48 @@ export default {
       this.backLoading = true;
       try {
         const { data } = await api.get(`/market/${this.createdMarketId}/`);
-        this.title = data.title;
-        this.description = data.description || "";
-        this.category = data.category;
-        this.resolutionDate = toDateTimeLocal(new Date(data.resolution_date));
-        this.openAt = toDateTimeLocal(new Date(data.open_at));
-        this.closeAt = toDateTimeLocal(new Date(data.close_at));
-        this.isCustom = Boolean(data.is_custom);
+        this.fillForm(data);
         this.step = 1;
       } catch (err) {
         const message = extractGeneralError(err);
         if (message) pushError(message);
       } finally {
         this.backLoading = false;
+      }
+    },
+    fillForm(market) {
+      this.title = market.title;
+      this.description = market.description || "";
+      this.category = market.category;
+      this.resolutionDate = toDateTimeLocal(new Date(market.resolution_date));
+      this.openAt = toDateTimeLocal(new Date(market.open_at));
+      this.closeAt = toDateTimeLocal(new Date(market.close_at));
+      this.isCustom = Boolean(market.is_custom);
+      this.isComboOnly = Boolean(market.is_combo_only);
+    },
+    async loadForEdit() {
+      this.editLoading = true;
+      try {
+        const { data } = await api.get(`/market/${this.$route.params.id}/`);
+        if (data.is_published) {
+          pushError("Published markets can no longer be edited.");
+          this.router.replace({ name: "markets" });
+          return;
+        }
+        this.createdMarketId = data.id;
+        this.fillForm(data);
+        this.originalDates = {
+          resolution_date: this.resolutionDate,
+          open_at: this.openAt,
+          close_at: this.closeAt,
+        };
+        // Let the pickers show an already-past opening time instead of clearing it.
+        if (this.openAt < this.minDateTime) this.minDateTime = this.openAt;
+      } catch (err) {
+        pushError(extractGeneralError(err) || "Could not load this market.");
+        this.router.replace({ name: "markets" });
+      } finally {
+        this.editLoading = false;
       }
     },
     async submitDetails() {

@@ -13,12 +13,12 @@
           <div class="md:grid-cols-2 grid-cols-1 grid gap-5 mb-5">
             <Textinput
               label="Amount (KES)"
-              type="number"
               name="amount"
               v-model="amount"
               :error="fieldErrors.amount"
-              step="0.01"
-              min="1"
+              isMask
+              :options="AMOUNT_MASK"
+              placeholder="0.00"
               classInput="h-[48px]"
             />
           </div>
@@ -51,25 +51,8 @@ import Button from "@/components/Button";
 import { useRouter } from "vue-router";
 import { pushSuccess, pushError } from "@/lib/alerts";
 import api from "@/lib/api";
-
-function extractFieldErrors(err) {
-  const data = err?.response?.data;
-  if (!data || typeof data !== "object") return {};
-  const fields = {};
-  for (const [key, value] of Object.entries(data)) {
-    if (key === "non_field_errors" || key === "detail") continue;
-    fields[key] = Array.isArray(value) ? value.join(" ") : String(value);
-  }
-  return fields;
-}
-
-function extractGeneralError(err) {
-  const data = err?.response?.data;
-  if (!data) return "Something went wrong. Please try again.";
-  if (data.non_field_errors) return data.non_field_errors.join(" ");
-  if (data.detail) return data.detail;
-  return "";
-}
+import { extractFieldErrors, extractGeneralError } from "@/lib/errors";
+import { AMOUNT_MASK } from "@/constant/masks";
 
 export default {
   components: { Card, Textinput, Textarea, Button },
@@ -79,6 +62,7 @@ export default {
   },
   data() {
     return {
+      AMOUNT_MASK,
       amount: "",
       note: "",
       loading: false,

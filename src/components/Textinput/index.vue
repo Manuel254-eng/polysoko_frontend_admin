@@ -37,8 +37,8 @@
         :class="`${classInput} cleave input-control block w-full focus:outline-none h-[40px] `"
         :name="name"
         :placeholder="placeholder"
-        :value="modelValue"
-        @input="$emit('update:modelValue', $event.target.value)"
+        :modelValue="modelValue"
+        @update:modelValue="$emit('update:modelValue', $event)"
         :error="error"
         :id="name"
         :readonly="isReadonly"
@@ -46,7 +46,6 @@
         :validate="validate"
         :options="options"
         v-if="isMask"
-        modelValue="modelValue"
       />
 
       <div

@@ -86,13 +86,7 @@ import Card from "@/components/Card";
 import InputGroup from "@/components/InputGroup";
 import Pagination from "@/components/Pagination";
 import api from "@/lib/api";
-
-function extractError(err) {
-  const data = err?.response?.data;
-  if (!data) return "Something went wrong. Please try again.";
-  if (data.detail) return data.detail;
-  return Object.values(data).flat().join(" ");
-}
+import { extractError } from "@/lib/errors";
 
 const BINARY_COLUMNS = [
   { label: "User", field: "phone_number" },

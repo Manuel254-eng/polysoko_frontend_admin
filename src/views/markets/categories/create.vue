@@ -81,6 +81,7 @@ import Tooltip from "@/components/Tooltip";
 import { useRouter } from "vue-router";
 import { pushSuccess, pushError } from "@/lib/alerts";
 import api from "@/lib/api";
+import { extractFieldErrors, extractGeneralError } from "@/lib/errors";
 
 const ICON_OPTIONS = [
   { value: "heroicons-outline:currency-dollar", label: "Finance" },
@@ -103,25 +104,6 @@ function slugify(value) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
-}
-
-function extractFieldErrors(err) {
-  const data = err?.response?.data;
-  if (!data || typeof data !== "object") return {};
-  const fields = {};
-  for (const [key, value] of Object.entries(data)) {
-    if (key === "non_field_errors" || key === "detail") continue;
-    fields[key] = Array.isArray(value) ? value.join(" ") : String(value);
-  }
-  return fields;
-}
-
-function extractGeneralError(err) {
-  const data = err?.response?.data;
-  if (!data) return "Something went wrong. Please try again.";
-  if (data.non_field_errors) return data.non_field_errors.join(" ");
-  if (data.detail) return data.detail;
-  return "";
 }
 
 export default {

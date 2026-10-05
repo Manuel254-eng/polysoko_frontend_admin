@@ -55,6 +55,10 @@ export const menuItems = [
         childtitle: "Resolution Requests",
         childlink: "/app/markets/resolution-requests",
       },
+      {
+        childtitle: "Combos",
+        childlink: "/app/markets/combos",
+      },
     ],
   },
   {

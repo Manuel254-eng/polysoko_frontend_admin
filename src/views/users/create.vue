@@ -97,25 +97,7 @@ import Button from "@/components/Button";
 import { useRouter } from "vue-router";
 import { pushSuccess, pushError } from "@/lib/alerts";
 import api from "@/lib/api";
-
-function extractFieldErrors(err) {
-  const data = err?.response?.data;
-  if (!data || typeof data !== "object") return {};
-  const fields = {};
-  for (const [key, value] of Object.entries(data)) {
-    if (key === "non_field_errors" || key === "detail") continue;
-    fields[key] = Array.isArray(value) ? value.join(" ") : String(value);
-  }
-  return fields;
-}
-
-function extractGeneralError(err) {
-  const data = err?.response?.data;
-  if (!data) return "Something went wrong. Please try again.";
-  if (data.non_field_errors) return data.non_field_errors.join(" ");
-  if (data.detail) return data.detail;
-  return "";
-}
+import { extractFieldErrors, extractGeneralError } from "@/lib/errors";
 
 export default {
   components: { Card, Textinput, InputGroup, Checkbox, Button },
