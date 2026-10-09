@@ -41,7 +41,7 @@
   </div>
 </template>
 <script>
-import { computed, defineComponent, ref } from "vue";
+import { computed, defineComponent, ref, watch } from "vue";
 export default defineComponent({
   name: "Checkbox",
   inheritAttrs: false,
@@ -83,6 +83,15 @@ export default defineComponent({
 
   setup(props, context) {
     const ck = ref(props.checked);
+    // Follow `checked` when the parent changes it after mount (e.g. an edit
+    // form filled in once its data loads, or one box clearing another) —
+    // otherwise the tick only ever reflected the initial value.
+    watch(
+      () => props.checked,
+      (value) => {
+        ck.value = value;
+      }
+    );
 
     // on change event
     const onChange = () => {

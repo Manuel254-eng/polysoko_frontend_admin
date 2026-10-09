@@ -141,7 +141,8 @@ export default {
     rows() {
       return this.trades.map((trade) => ({
         ...trade,
-        price_per_share: Number(trade.price_per_share).toFixed(this.activeTab === "binary" ? 2 : 4),
+        price_per_share: Number(trade.price_per_share).toFixed(4),
+        shares: Number(trade.shares).toLocaleString(undefined, { maximumFractionDigits: 4 }),
         amount_kes: Number(trade.amount_kes).toLocaleString(),
         odds: trade.odds != null ? `${Number(trade.odds).toFixed(2)}x` : "—",
         created_at: new Date(trade.created_at).toLocaleString(),

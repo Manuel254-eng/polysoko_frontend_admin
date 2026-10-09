@@ -4,7 +4,7 @@
       <div class="left-column relative z-[1]">
         <div class="max-w-[520px] pt-20 ltr:pl-20 rtl:pr-20">
           <h4>
-            Polysoko
+            NaiPol
             <span class="text-slate-800 dark:text-slate-400 font-bold">Admin</span>
           </h4>
         </div>
@@ -25,19 +25,19 @@
           <div class="auth-box h-full flex flex-col justify-center">
             <div class="mobile-logo text-center mb-6 lg:hidden block">
               <router-link to="/">
-                <span class="text-2xl font-bold text-slate-900 dark:text-white">Polysoko</span>
+                <span class="text-2xl font-bold text-slate-900 dark:text-white">NaiPol</span>
               </router-link>
             </div>
             <div class="text-center 2xl:mb-10 mb-4">
               <h4 class="font-medium">Sign in</h4>
               <div class="text-slate-500 text-base">
-                Sign in to your account to start using Polysoko
+                Sign in to your account to start using NaiPol
               </div>
             </div>
             <Signin />
           </div>
           <div class="auth-footer text-center">
-            Copyright 2021, Polysoko All Rights Reserved.
+            Copyright 2021, NaiPol All Rights Reserved.
           </div>
         </div>
       </div>

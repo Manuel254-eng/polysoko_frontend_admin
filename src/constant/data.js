@@ -28,6 +28,11 @@ export const menuItems = [
     ],
   },
   {
+    title: "Players",
+    icon: "heroicons-outline:user-group",
+    link: "/app/users/clients",
+  },
+  {
     isHeadr: true,
     title: "Markets",
   },
@@ -58,6 +63,10 @@ export const menuItems = [
       {
         childtitle: "Combos",
         childlink: "/app/markets/combos",
+      },
+      {
+        childtitle: "Jackpots",
+        childlink: "/app/markets/jackpots",
       },
     ],
   },
@@ -96,5 +105,14 @@ export const menuItems = [
         childlink: "/app/accounting/reserve/add",
       },
     ],
+  },
+  {
+    isHeadr: true,
+    title: "Testing",
+  },
+  {
+    title: "Test tools",
+    icon: "heroicons-outline:beaker",
+    link: "/app/testing",
   },
 ];

@@ -4,6 +4,11 @@
       <div class="md:flex justify-between pb-6 md:space-y-0 space-y-3 items-center">
         <h5>Markets</h5>
         <div class="flex items-center gap-3">
+          <select v-model="promotionFilter" class="input-control h-[38px] w-auto" aria-label="Filter markets">
+            <option value="">All markets</option>
+            <option value="is_featured">Featured</option>
+            <option value="is_pinned">Pinned</option>
+          </select>
           <InputGroup v-model="searchTerm" placeholder="Search" type="text" prependIcon="heroicons-outline:search" merged />
           <router-link :to="{ name: 'markets-create' }" class="btn btn-dark btn-sm whitespace-nowrap">
             Add market
@@ -19,7 +24,9 @@
       </div>
       <template v-else>
         <div v-if="rows.length === 0" class="text-slate-500 dark:text-slate-400 text-sm py-10 text-center">
-          No published markets yet.
+          {{
+            searchTerm.trim() || promotionFilter ? "No markets match these filters." : "No published markets yet."
+          }}
         </div>
         <template v-else>
           <vue-good-table
@@ -27,7 +34,7 @@
             :rows="rows"
             styleClass="vgt-table bordered centered"
             :pagination-options="{ enabled: false }"
-            :search-options="{ enabled: true, externalQuery: searchTerm }"
+            :search-options="{ enabled: false }"
             :select-options="{
               enabled: true,
               selectOnCheckboxOnly: true,
@@ -40,6 +47,18 @@
             <template v-slot:table-row="props">
               <span v-if="props.column.field === 'title'" class="text-slate-600 dark:text-slate-300 font-medium">
                 {{ props.row.title }}
+                <Icon
+                  v-if="props.row.is_featured"
+                  icon="heroicons-solid:star"
+                  class="inline text-warning-500 ltr:ml-1 rtl:mr-1"
+                  title="Featured"
+                />
+                <Icon
+                  v-if="props.row.is_pinned"
+                  icon="heroicons-outline:arrow-up"
+                  class="inline text-info-500 ltr:ml-1 rtl:mr-1"
+                  title="Pinned"
+                />
               </span>
               <span v-else-if="props.column.field === 'is_published'" class="block w-full">
                 <span
@@ -134,6 +153,8 @@ export default {
       markets: [],
       categories: [],
       searchTerm: "",
+      // "" | "is_featured" | "is_pinned" — sent as ?<field>=true, server-side like search.
+      promotionFilter: "",
       count: 0,
       next: null,
       previous: null,
@@ -168,6 +189,8 @@ export default {
         category: this.categoryNameById[market.category] || "—",
         status: market.status,
         is_published: market.is_published,
+        is_featured: market.is_featured,
+        is_pinned: market.is_pinned,
         resolution_date: new Date(market.resolution_date).toLocaleString(),
       }));
     },
@@ -181,12 +204,47 @@ export default {
     }
     await this.loadPage(1);
   },
+  watch: {
+    // Search runs against the whole table server-side (title or category), so
+    // it restarts from page 1 — debounced so typing doesn't fire a request per key.
+    searchTerm() {
+      clearTimeout(this.searchTimer);
+      this.searchTimer = setTimeout(() => this.loadPage(1), 300);
+    },
+    promotionFilter() {
+      this.loadPage(1);
+    },
+  },
+  beforeUnmount() {
+    clearTimeout(this.searchTimer);
+  },
   methods: {
     // "Publish" and "edit" only make sense for a draft — a published market is locked.
+    // Featuring and pinning stay available after publishing — they only change
+    // how the market is promoted on the home page, not what's being bet on.
     rowActions(row) {
       const [view, edit, ...rest] = this.baseActions;
-      if (row.is_published) return [view, ...rest];
-      return [view, { name: "publish", icon: "heroicons-outline:check-circle" }, edit, ...rest];
+      const liquidity = row.status === "open" ? [{ name: "add liquidity", icon: "heroicons-outline:plus-circle" }] : [];
+      const promotion = [
+        row.is_featured
+          ? { name: "unfeature", icon: "heroicons-outline:star" }
+          : { name: "feature", icon: "heroicons-outline:star" },
+        row.is_pinned
+          ? { name: "unpin", icon: "heroicons-outline:arrow-down" }
+          : { name: "pin", icon: "heroicons-outline:arrow-up" },
+      ];
+      if (row.is_published) return [view, ...liquidity, ...promotion, ...rest];
+      return [view, { name: "publish", icon: "heroicons-outline:check-circle" }, edit, ...liquidity, ...promotion, ...rest];
+    },
+    async setPromotion(row, field, value, message) {
+      try {
+        const { data } = await api.patch(`/market/${row.id}/`, { [field]: value });
+        const market = this.markets.find((m) => m.id === row.id);
+        if (market) market[field] = data[field];
+        pushSuccess(message);
+      } catch (err) {
+        pushError(extractError(err));
+      }
     },
     handleAction(name, row) {
       if (name === "view") {
@@ -197,9 +255,23 @@ export default {
         this.router.push({ name: "markets-edit", params: { id: row.id } });
         return;
       }
+      if (name === "add liquidity") {
+        this.router.push({ name: "market-details", params: { id: row.id }, query: { addLiquidity: 1 } });
+        return;
+      }
       if (name === "publish") {
         this.pendingPublish = row;
         this.$refs.publishModal.openModal();
+        return;
+      }
+      if (name === "feature" || name === "unfeature") {
+        const featuring = name === "feature";
+        this.setPromotion(row, "is_featured", featuring, featuring ? "Market featured." : "Market unfeatured.");
+        return;
+      }
+      if (name === "pin" || name === "unpin") {
+        const pinning = name === "pin";
+        this.setPromotion(row, "is_pinned", pinning, pinning ? "Market pinned." : "Market unpinned.");
         return;
       }
       // delete is not wired yet
@@ -224,19 +296,27 @@ export default {
       }
     },
     async loadPage(page) {
+      // Only the latest request may update the table — an earlier, slower
+      // search response must not overwrite the results of a newer one.
+      const requestId = (this.latestRequestId = (this.latestRequestId || 0) + 1);
       this.loading = true;
       this.errorMessage = "";
       try {
-        const { data } = await api.get("/market/", { params: { page } });
+        const search = this.searchTerm.trim();
+        const params = { page, search: search || undefined };
+        if (this.promotionFilter) params[this.promotionFilter] = true;
+        const { data } = await api.get("/market/", { params });
+        if (requestId !== this.latestRequestId) return;
         this.markets = data.results;
         this.count = data.count;
         this.next = data.next;
         this.previous = data.previous;
         this.page = page;
       } catch (err) {
+        if (requestId !== this.latestRequestId) return;
         this.errorMessage = extractError(err);
       } finally {
-        this.loading = false;
+        if (requestId === this.latestRequestId) this.loading = false;
       }
     },
   },

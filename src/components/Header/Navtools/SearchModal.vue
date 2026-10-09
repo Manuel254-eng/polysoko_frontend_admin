@@ -126,7 +126,7 @@ const isOpen = ref(false);
 const searchList = [
   {
     id: 1,
-    name: "What is Polysoko ?",
+    name: "What is NaiPol ?",
   },
   {
     id: 2,

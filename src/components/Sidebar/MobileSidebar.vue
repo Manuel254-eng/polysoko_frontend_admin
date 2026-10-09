@@ -8,7 +8,7 @@
   >
     <div class="logo-segment flex justify-between items-center px-4 py-6">
       <router-link :to="{ name: 'home' }">
-        <span class="text-xl font-bold text-slate-900 dark:text-white">Polysoko</span>
+        <span class="text-xl font-bold text-slate-900 dark:text-white">NaiPol</span>
       </router-link>
       <span
         class="cursor-pointer text-slate-900 dark:text-white text-2xl"

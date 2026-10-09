@@ -116,10 +116,25 @@
 
           <div class="mb-5">
             <label class="input-label">Visibility</label>
+            <Checkbox v-model="isFeatured" :checked="isFeatured" label="Featured" name="is_featured" />
+            <span class="block text-secondary-500 font-light leading-4 text-xs mt-2 mb-3">
+              Shown in the home page's featured slider at the top. Yes/No markets only — custom-outcome markets
+              stay in the regular list.
+            </span>
+            <Checkbox v-model="isPinned" :checked="isPinned" label="Pinned" name="is_pinned" />
+            <span class="block text-secondary-500 font-light leading-4 text-xs mt-2 mb-3">
+              Listed ahead of other markets on the home page (no visual difference) — the rest follow by
+              resolution date.
+            </span>
             <Checkbox v-model="isComboOnly" :checked="isComboOnly" label="Combo only" name="is_combo_only" />
-            <span class="block text-secondary-500 font-light leading-4 text-xs mt-2">
+            <span class="block text-secondary-500 font-light leading-4 text-xs mt-2 mb-3">
               Hidden from the public market list — only offered as a leg in combos.
             </span>
+            <Checkbox v-model="isJackpotOnly" :checked="isJackpotOnly" label="Jackpot only" name="is_jackpot_only" />
+            <span class="block text-secondary-500 font-light leading-4 text-xs mt-2">
+              Hidden from the public market list and from combos — only offered through jackpots.
+            </span>
+            <div v-if="fieldErrors.is_jackpot_only" class="text-danger-500 text-sm mt-1">{{ fieldErrors.is_jackpot_only }}</div>
           </div>
 
           <div class="ltr:text-right rtl:text-left">
@@ -164,11 +179,11 @@
                 isMask
                 :options="AMOUNT_MASK"
                 classInput="h-[48px]"
-                placeholder="0.01"
+                :placeholder="MIN_MARKET_LIQUIDITY.toLocaleString()"
               />
             </div>
             <p class="text-sm text-slate-500 dark:text-slate-400 mb-5">
-              A winning share always pays 1 KES, so there's no separate contract payout to set here.
+              Liquidity must be at least KES {{ MIN_MARKET_LIQUIDITY.toLocaleString() }}. A winning share always pays 1 KES, so there's no separate contract payout to set here.
             </p>
           </template>
 
@@ -181,12 +196,12 @@
                 :error="detailErrors.liquidity"
                 isMask
                 :options="AMOUNT_MASK"
-                placeholder="0.00"
+                :placeholder="MIN_MARKET_LIQUIDITY.toLocaleString()"
                 classInput="h-[48px]"
               />
             </div>
             <p class="text-sm text-slate-500 dark:text-slate-400 mb-5">
-              The most the platform can lose across all trading on this market — not order-book depth like a
+              At least KES {{ MIN_MARKET_LIQUIDITY.toLocaleString() }}. The most the platform can lose across all trading on this market — not order-book depth like a
               binary market's liquidity. Custom markets always pay 1 KES per winning share, so there's no
               separate contract payout to set here.
             </p>
@@ -276,6 +291,7 @@ import { pushSuccess, pushError } from "@/lib/alerts";
 import api from "@/lib/api";
 import { extractFieldErrors, extractGeneralError } from "@/lib/errors";
 import { AMOUNT_MASK } from "@/constant/masks";
+import { MIN_MARKET_LIQUIDITY } from "@/constant/markets";
 
 // Format a Date as the "YYYY-MM-DDTHH:mm" string datetime-local inputs expect
 // for their value/min/max attributes (local time, not UTC).
@@ -322,10 +338,14 @@ export default {
 
       isCustom: false,
       isComboOnly: false,
+      isJackpotOnly: false,
+      isPinned: false,
+      isFeatured: false,
 
       yesProbabilityPercent: "50",
       liquidity: "",
       AMOUNT_MASK,
+      MIN_MARKET_LIQUIDITY,
       detailsLoading: false,
       detailErrors: {},
 
@@ -391,6 +411,14 @@ export default {
     },
   },
   watch: {
+    // Combo-only and jackpot-only exclude each other — ticking one clears the other.
+    isComboOnly(value) {
+      if (value) this.isJackpotOnly = false;
+    },
+    isJackpotOnly(value) {
+      if (value) this.isComboOnly = false;
+      this.clearFieldError("is_jackpot_only");
+    },
     title() {
       this.clearFieldError("title");
     },
@@ -511,6 +539,9 @@ export default {
           close_at: new Date(this.closeAt).toISOString(),
           is_custom: this.isCustom,
           is_combo_only: this.isComboOnly,
+          is_jackpot_only: this.isJackpotOnly,
+          is_pinned: this.isPinned,
+          is_featured: this.isFeatured,
         };
         if (this.isEdit) {
           delete payload.is_custom;
@@ -560,6 +591,9 @@ export default {
       this.closeAt = toDateTimeLocal(new Date(market.close_at));
       this.isCustom = Boolean(market.is_custom);
       this.isComboOnly = Boolean(market.is_combo_only);
+      this.isJackpotOnly = Boolean(market.is_jackpot_only);
+      this.isPinned = Boolean(market.is_pinned);
+      this.isFeatured = Boolean(market.is_featured);
     },
     async loadForEdit() {
       this.editLoading = true;
@@ -594,8 +628,8 @@ export default {
 
       // Liquidity is deducted from the platform wallet on create, so unlike
       // yes_probability it can't fall back to a model default.
-      if (!this.liquidity || Number(this.liquidity) < 0.01) {
-        this.detailErrors = { liquidity: "Liquidity is required and must be at least 0.01." };
+      if (!this.liquidity || Number(this.liquidity) < MIN_MARKET_LIQUIDITY) {
+        this.detailErrors = { liquidity: `Liquidity must be at least KES ${MIN_MARKET_LIQUIDITY.toLocaleString()}.` };
         return;
       }
 
@@ -650,8 +684,8 @@ export default {
       // The max-loss budget funds the LMSR pool (deducted from the platform
       // wallet, same mechanism as a binary market's seed) so it can't fall
       // back to a model default.
-      if (!this.liquidity || Number(this.liquidity) < 0.01) {
-        this.detailErrors = { liquidity: "Max loss budget is required and must be at least 0.01." };
+      if (!this.liquidity || Number(this.liquidity) < MIN_MARKET_LIQUIDITY) {
+        this.detailErrors = { liquidity: `Max loss budget must be at least KES ${MIN_MARKET_LIQUIDITY.toLocaleString()}.` };
         return;
       }
       if (!this.validateChoices()) return;

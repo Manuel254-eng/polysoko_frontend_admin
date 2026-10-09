@@ -1,4 +1,4 @@
-# Polysoko (Node V-14)
+# NaiPol (Node V-14)
 
 ## Project setup
 ```

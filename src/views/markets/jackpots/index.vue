@@ -2,11 +2,11 @@
   <div>
     <Card noborder>
       <div class="md:flex justify-between pb-6 md:space-y-0 space-y-3 items-center">
-        <h5>Combos</h5>
+        <h5>Jackpots</h5>
         <div class="flex items-center gap-3">
           <InputGroup v-model="searchTerm" placeholder="Search" type="text" prependIcon="heroicons-outline:search" merged />
-          <router-link :to="{ name: 'market-combos-create' }" class="btn btn-dark btn-sm whitespace-nowrap">
-            Create combo
+          <router-link :to="{ name: 'market-jackpots-create' }" class="btn btn-dark btn-sm whitespace-nowrap">
+            Create jackpot
           </router-link>
         </div>
       </div>
@@ -19,7 +19,7 @@
       </div>
       <template v-else>
         <div v-if="rows.length === 0" class="text-slate-500 dark:text-slate-400 text-sm py-10 text-center">
-          No combos yet.
+          No jackpots yet.
         </div>
         <template v-else>
           <vue-good-table
@@ -39,16 +39,16 @@
           >
             <template v-slot:table-row="props">
               <span v-if="props.column.field === 'title'" class="text-slate-600 dark:text-slate-300 font-medium">
-                <router-link :to="{ name: 'market-combos-view', params: { id: props.row.id } }" class="hover:underline">
+                <router-link :to="{ name: 'market-jackpots-view', params: { id: props.row.id } }" class="hover:underline">
                   {{ props.row.title }}
                 </router-link>
               </span>
               <span v-else-if="props.column.field === 'status'" class="block w-full">
                 <span
                   class="inline-block px-3 min-w-[90px] text-center mx-auto py-1 rounded-[999px] bg-opacity-25"
-                  :class="props.row.status === 'published' ? 'text-success-500 bg-success-500' : 'text-warning-500 bg-warning-500'"
+                  :class="statusClass(props.row.status)"
                 >
-                  {{ props.row.status === "published" ? "Published" : "Draft" }}
+                  {{ statusLabel(props.row.status) }}
                 </span>
               </span>
               <span v-else-if="props.column.field === 'action'">
@@ -90,7 +90,7 @@
       </template>
     </Card>
 
-    <Modal ref="publishModal" title="Publish combo" labelClass="hidden" centered>
+    <Modal ref="publishModal" title="Publish jackpot" labelClass="hidden" centered>
       <h4 class="font-medium text-lg mb-3 text-slate-900 dark:text-white">Are you sure?</h4>
       <div class="text-base text-slate-600 dark:text-slate-300">
         Publishing "<strong>{{ pendingPublish?.title }}</strong>" makes it visible to everyone, and it can't be edited
@@ -132,7 +132,7 @@ export default {
     return {
       loading: true,
       errorMessage: "",
-      combos: [],
+      jackpots: [],
       searchTerm: "",
       count: 0,
       page: 1,
@@ -143,7 +143,10 @@ export default {
       columns: [
         { label: "Code", field: "code" },
         { label: "Title", field: "title" },
-        { label: "Markets", field: "items_count", type: "number" },
+        { label: "Markets", field: "markets" },
+        { label: "Entry fee", field: "entry_fee" },
+        { label: "Prize", field: "prize_amount" },
+        { label: "Partial wins", field: "allow_partial_wins" },
         { label: "Status", field: "status" },
         { label: "Created", field: "created_at" },
         { label: "Action", field: "action", sortable: false },
@@ -152,13 +155,17 @@ export default {
   },
   computed: {
     rows() {
-      return this.combos.map((combo) => ({
-        id: combo.id,
-        code: combo.code,
-        title: combo.title,
-        items_count: combo.items_count,
-        status: combo.status,
-        created_at: new Date(combo.created_at).toLocaleString(),
+      return this.jackpots.map((jackpot) => ({
+        id: jackpot.id,
+        code: jackpot.code,
+        title: jackpot.title,
+        // markets added so far out of the count it's set to
+        markets: `${jackpot.items_count} / ${jackpot.market_count}`,
+        entry_fee: this.formatKes(jackpot.entry_fee),
+        prize_amount: this.formatKes(jackpot.prize_amount),
+        allow_partial_wins: jackpot.allow_partial_wins ? "Yes" : "No",
+        status: jackpot.status,
+        created_at: new Date(jackpot.created_at).toLocaleString(),
       }));
     },
   },
@@ -166,7 +173,20 @@ export default {
     await this.loadPage(1);
   },
   methods: {
-    // A published combo is locked — only drafts can be edited or published.
+    statusLabel(status) {
+      return { draft: "Draft", published: "Published", settled: "Settled" }[status] || status;
+    },
+    statusClass(status) {
+      return {
+        draft: "text-warning-500 bg-warning-500",
+        published: "text-success-500 bg-success-500",
+        settled: "text-info-500 bg-info-500",
+      }[status];
+    },
+    formatKes(value) {
+      return `KES ${Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+    },
+    // A published jackpot is locked — only drafts can be edited or published.
     rowActions(row) {
       const view = { name: "view", icon: "heroicons-outline:eye" };
       const remove = { name: "delete", icon: "heroicons-outline:trash" };
@@ -180,11 +200,11 @@ export default {
     },
     handleAction(name, row) {
       if (name === "view") {
-        this.router.push({ name: "market-combos-view", params: { id: row.id } });
+        this.router.push({ name: "market-jackpots-view", params: { id: row.id } });
         return;
       }
       if (name === "edit") {
-        this.router.push({ name: "market-combos-edit", params: { id: row.id } });
+        this.router.push({ name: "market-jackpots-edit", params: { id: row.id } });
         return;
       }
       if (name === "publish") {
@@ -199,10 +219,10 @@ export default {
       const { id } = this.pendingPublish;
       this.publishingId = id;
       try {
-        const { data } = await api.post(`/market/combos/${id}/publish/`);
-        const combo = this.combos.find((c) => c.id === id);
-        if (combo) combo.status = data.status;
-        pushSuccess("Combo published.");
+        const { data } = await api.post(`/market/jackpots/${id}/publish/`);
+        const jackpot = this.jackpots.find((j) => j.id === id);
+        if (jackpot) jackpot.status = data.status;
+        pushSuccess("Jackpot published.");
         this.$refs.publishModal.closeModal();
       } catch (err) {
         pushError(extractError(err));
@@ -214,8 +234,8 @@ export default {
       this.loading = true;
       this.errorMessage = "";
       try {
-        const { data } = await api.get("/market/combos/", { params: { page } });
-        this.combos = data.results;
+        const { data } = await api.get("/market/jackpots/", { params: { page } });
+        this.jackpots = data.results;
         this.count = data.count;
         this.page = page;
       } catch (err) {

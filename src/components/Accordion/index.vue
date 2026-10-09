@@ -66,17 +66,17 @@ const props = defineProps({
 
     default: () => [
       {
-        title: "How does Polysoko work?",
+        title: "How does NaiPol work?",
         content:
           "Jornalists call this critical, introductory section the  and when bridge properly executed, it's the that carries your reader from anheadine try at attention-grabbing to the body of your blog post.",
       },
       {
-        title: "Where i can learn more about using Polysoko?",
+        title: "Where i can learn more about using NaiPol?",
         content:
           "Jornalists call this critical, introductory section the  and when bridge properly executed, it's the that carries your reader from anheadine try at attention-grabbing to the body of your blog post.",
       },
       {
-        title: "Why Polysoko is so important?",
+        title: "Why NaiPol is so important?",
         content:
           "Jornalists call this critical, introductory section the  and when bridge properly executed, it's the that carries your reader from anheadine try at attention-grabbing to the body of your blog post.",
       },

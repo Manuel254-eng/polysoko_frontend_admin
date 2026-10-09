@@ -5,7 +5,7 @@
     >
       <div class="grid md:grid-cols-2 grid-cols-1 md:gap-5">
         <div class="text-center ltr:md:text-start rtl:md:text-right text-sm">
-          COPYRIGHT &copy; {{ currentYear }} Polysoko, All rights Reserved
+          COPYRIGHT &copy; {{ currentYear }} NaiPol, All rights Reserved
         </div>
       </div>
     </div>

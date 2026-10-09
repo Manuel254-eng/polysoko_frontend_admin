@@ -4,6 +4,19 @@
       <header class="border-b px-4 border-slate-100 dark:border-slate-700 pt-4 pb-3 flex justify-between items-center">
         <h6 class="card-title mb-0">Market Details</h6>
         <div class="flex items-center gap-3">
+          <router-link
+            v-if="!loading && !errorMessage && !market.is_published"
+            :to="{ name: 'markets-edit', params: { id: market.id } }"
+            class="btn btn-outline-dark btn-sm"
+          >
+            Edit
+          </router-link>
+          <Button
+            v-if="market.status === 'open'"
+            text="Add liquidity"
+            btnClass="btn-outline-warning btn-sm"
+            @click="openLiquidityModal"
+          />
           <Button
             v-if="market.status === 'open'"
             text="Close market"
@@ -80,12 +93,53 @@
             </div>
           </template>
           <div class="md:col-span-2">
+            <dt class="text-xs uppercase text-slate-400 dark:text-slate-500 font-medium mb-2">Outcome probabilities</dt>
+            <dd v-if="outcomes.length === 0" class="text-sm text-slate-500 dark:text-slate-400">
+              Not seeded yet — probabilities appear once its liquidity is set up.
+            </dd>
+            <dd v-else class="space-y-3">
+              <div v-for="outcome in outcomes" :key="outcome.key">
+                <div class="flex justify-between items-baseline text-sm mb-1">
+                  <span class="font-medium text-slate-700 dark:text-slate-200">
+                    {{ outcome.label }}
+                    <span
+                      v-if="outcome.winner"
+                      class="ltr:ml-1 rtl:mr-1 text-[10px] uppercase font-medium px-1.5 py-[1px] rounded text-success-500 bg-success-500 bg-opacity-25"
+                    >
+                      Winner
+                    </span>
+                  </span>
+                  <span class="text-slate-500 dark:text-slate-400">
+                    <strong class="text-slate-900 dark:text-white">{{ outcome.percent.toFixed(1) }}%</strong>
+                    · {{ outcome.odds != null ? `${outcome.odds.toFixed(2)}x` : "—" }}
+                    <span v-if="outcome.openedAt != null" class="text-xs">
+                      · opened {{ outcome.openedAt.toFixed(1) }}%
+                    </span>
+                  </span>
+                </div>
+                <div class="h-2 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
+                  <div class="h-full rounded-full" :style="{ width: `${outcome.percent}%`, background: outcome.color }"></div>
+                </div>
+              </div>
+            </dd>
+          </div>
+          <div class="md:col-span-2">
             <dt class="text-xs uppercase text-slate-400 dark:text-slate-500 font-medium mb-1">Description</dt>
             <dd class="text-slate-700 dark:text-slate-200 whitespace-pre-line">{{ market.description || "—" }}</dd>
           </div>
         </dl>
       </div>
     </Card>
+
+    <div v-if="!loading && !errorMessage" class="grid xl:grid-cols-2 grid-cols-1 gap-5 mt-5">
+      <PriceHistoryChart :key="`price-${chartsVersion}`" :market-id="$route.params.id" />
+      <LiquidityHistoryChart :key="`liquidity-${chartsVersion}`" :market-id="$route.params.id" />
+      <VolumeBreakdownChart
+        :key="`volume-${chartsVersion}`"
+        :market-id="$route.params.id"
+        :is-custom="Boolean(market.is_custom)"
+      />
+    </div>
 
     <Card v-if="market.status === 'resolving' && pendingRequest" noborder>
       <div class="flex md:flex-row flex-col md:items-center justify-between gap-3">
@@ -124,6 +178,28 @@
         />
       </div>
     </Card>
+
+    <Modal ref="liquidityModal" title="Add liquidity" labelClass="hidden" centered>
+      <p class="text-sm text-slate-600 dark:text-slate-300 mb-4">
+        Tops up <strong>{{ market.title }}</strong>'s pool from the platform reserve. Prices stay where they are — the
+        market just gets deeper, so bigger bets fill and per-bet limits rise. It comes back to the reserve at settlement
+        like the original seed.
+      </p>
+      <Textinput
+        label="Amount (KES)"
+        name="liquidity_amount"
+        v-model="liquidityAmount"
+        :error="liquidityError"
+        isMask
+        :options="AMOUNT_MASK"
+        placeholder="5,000"
+        classInput="h-[48px]"
+      />
+      <template v-slot:footer>
+        <Button text="Cancel" btnClass="btn-outline-dark" @click="$refs.liquidityModal.closeModal()" />
+        <Button text="Add liquidity" btnClass="btn-dark" :isLoading="addingLiquidity" @click="submitLiquidity" />
+      </template>
+    </Modal>
 
     <Modal ref="closeModal" title="Close market" labelClass="hidden" centered>
       <h4 class="font-medium text-lg mb-3 text-slate-900 dark:text-white">Are you sure?</h4>
@@ -205,19 +281,29 @@ import Modal from "@/components/Modal/Modal";
 import Button from "@/components/Button";
 import Radio from "@/components/Radio";
 import Textinput from "@/components/Textinput";
+import PriceHistoryChart from "./PriceHistoryChart.vue";
+import LiquidityHistoryChart from "./LiquidityHistoryChart.vue";
+import VolumeBreakdownChart from "./VolumeBreakdownChart.vue";
 import { pushSuccess, pushError } from "@/lib/alerts";
 import api from "@/lib/api";
-import { extractError } from "@/lib/errors";
+import { extractError, extractFieldErrors, extractGeneralError } from "@/lib/errors";
+import { AMOUNT_MASK } from "@/constant/masks";
 
 const NOT_FOUND = { notFoundMessage: "This market could not be found." };
 
 export default {
-  components: { Card, Modal, Button, Radio, Textinput },
+  components: { Card, Modal, Button, Radio, Textinput, PriceHistoryChart, LiquidityHistoryChart, VolumeBreakdownChart },
   data() {
     return {
       loading: true,
       errorMessage: "",
       market: {},
+      AMOUNT_MASK,
+      liquidityAmount: "",
+      liquidityError: "",
+      addingLiquidity: false,
+      // Bumped after a top-up so both charts reload with the new point.
+      chartsVersion: 0,
       categories: [],
       closing: false,
       resolving: false,
@@ -235,6 +321,47 @@ export default {
     categoryName() {
       return this.categories.find((c) => c.id === this.market.category)?.name || "—";
     },
+    // Each outcome's current implied probability (its price — a winning share
+    // pays KES 1), the odds a bettor sees, and where it opened. Same colours as
+    // the price history chart.
+    outcomes() {
+      const m = this.market;
+      const num = (value) => (value != null ? Number(value) : null);
+      if (m.is_custom) {
+        const colors = ["#d4a017", "#3b82f6", "#8b5cf6", "#14b8a6", "#f97316", "#ec4899", "#64748b"];
+        return (m.choices || []).map((choice, i) => ({
+          key: `choice-${choice.id}`,
+          label: choice.label,
+          percent: Number(choice.current_price) * 100,
+          odds: num(choice.odds),
+          openedAt: choice.probability != null ? Number(choice.probability) * 100 : null,
+          color: colors[i % colors.length],
+          winner: m.status === "resolved" && m.resolved_choice === choice.id,
+        }));
+      }
+      const d = m.details;
+      if (!d) return [];
+      return [
+        {
+          key: "yes",
+          label: "Yes",
+          percent: Number(d.current_yes_price) * 100,
+          odds: num(d.yes_odds),
+          openedAt: d.initial_yes_price != null ? Number(d.initial_yes_price) * 100 : null,
+          color: "#16a34a",
+          winner: m.status === "resolved" && m.outcome === "yes",
+        },
+        {
+          key: "no",
+          label: "No",
+          percent: Number(d.current_no_price) * 100,
+          odds: num(d.no_odds),
+          openedAt: d.initial_no_price != null ? Number(d.initial_no_price) * 100 : null,
+          color: "#ef4444",
+          winner: m.status === "resolved" && m.outcome === "no",
+        },
+      ];
+    },
   },
   async mounted() {
     try {
@@ -247,6 +374,10 @@ export default {
       if (this.market.status === "resolving") {
         await this.loadPendingRequest();
       }
+      // The markets table's "add liquidity" action lands here with ?addLiquidity=1.
+      if (this.$route.query.addLiquidity && this.market.status === "open") {
+        this.$nextTick(() => this.openLiquidityModal());
+      }
     } catch (err) {
       this.errorMessage = extractError(err, NOT_FOUND);
     } finally {
@@ -254,6 +385,30 @@ export default {
     }
   },
   methods: {
+    openLiquidityModal() {
+      this.liquidityAmount = "";
+      this.liquidityError = "";
+      this.$refs.liquidityModal.openModal();
+    },
+    async submitLiquidity() {
+      if (!(Number(this.liquidityAmount) >= 1)) {
+        this.liquidityError = "Enter at least KES 1.";
+        return;
+      }
+      this.addingLiquidity = true;
+      try {
+        const { data } = await api.post(`/market/${this.market.id}/liquidity/`, { amount: this.liquidityAmount });
+        pushSuccess(`Liquidity added — pool now KES ${Number(data.total_liquidity).toLocaleString()} seeded.`);
+        this.$refs.liquidityModal.closeModal();
+        this.chartsVersion += 1;
+      } catch (err) {
+        this.liquidityError = extractFieldErrors(err).amount || "";
+        const message = extractGeneralError(err);
+        if (message) pushError(message);
+      } finally {
+        this.addingLiquidity = false;
+      }
+    },
     formatDate(value) {
       return value ? new Date(value).toLocaleString() : "—";
     },

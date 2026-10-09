@@ -37,6 +37,21 @@ const routes = [
         component: () => import("@/views/users/index.vue"),
       },
       {
+        path: "users/clients",
+        name: "users-clients",
+        component: () => import("@/views/users/clients.vue"),
+      },
+      {
+        path: "testing",
+        name: "testing",
+        component: () => import("@/views/testing/index.vue"),
+      },
+      {
+        path: "testing/simulate-bets",
+        name: "testing-simulate-bets",
+        component: () => import("@/views/testing/simulate-bets.vue"),
+      },
+      {
         path: "users/create",
         name: "users-create",
         component: () => import("@/views/users/create.vue"),
@@ -88,6 +103,37 @@ const routes = [
         path: "markets/combos/create",
         name: "market-combos-create",
         component: () => import("@/views/markets/combos/create.vue"),
+      },
+      {
+        path: "markets/combos/:id",
+        name: "market-combos-view",
+        component: () => import("@/views/markets/combos/view.vue"),
+        meta: {
+          hide: true,
+        },
+      },
+      {
+        path: "markets/jackpots",
+        name: "market-jackpots",
+        component: () => import("@/views/markets/jackpots/index.vue"),
+      },
+      {
+        path: "markets/jackpots/create",
+        name: "market-jackpots-create",
+        component: () => import("@/views/markets/jackpots/create.vue"),
+      },
+      {
+        path: "markets/jackpots/:id",
+        name: "market-jackpots-view",
+        component: () => import("@/views/markets/jackpots/view.vue"),
+        meta: {
+          hide: true,
+        },
+      },
+      {
+        path: "markets/jackpots/:id/edit",
+        name: "market-jackpots-edit",
+        component: () => import("@/views/markets/jackpots/create.vue"),
       },
       {
         path: "markets/combos/:id/edit",
