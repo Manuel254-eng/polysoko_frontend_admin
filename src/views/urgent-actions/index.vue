@@ -7,7 +7,7 @@
     <div v-if="loading" class="text-slate-500 text-sm py-10 text-center">Loading…</div>
     <div v-else-if="errorMessage" class="text-danger-500 text-sm py-10 text-center">{{ errorMessage }}</div>
     <div v-else-if="!markets.length" class="text-slate-500 text-sm py-10 text-center">No markets need resolution attention.</div>
-    <vue-good-table v-else :columns="columns" :rows="rows" styleClass="vgt-table bordered centered">
+    <vue-good-table v-else :columns="columns" :rows="rows" styleClass="vgt-table bordered centered" :pagination-options="{ enabled: true, perPage: 10 }">
       <template #table-row="props">
         <span v-if="props.column.field === 'status'" class="capitalize">{{ props.row.status }}</span>
         <span v-else-if="props.column.field === 'resolution_date'" :class="props.row.overdue ? 'text-danger-500 font-medium' : ''">{{ props.row.resolution_date }}</span>
