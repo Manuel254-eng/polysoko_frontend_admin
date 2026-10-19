@@ -26,16 +26,6 @@ export const menuItems = [
   },
   {
     isHeadr: true,
-    title: "Urgent actions",
-  },
-  {
-    title: "Urgent actions",
-    icon: "heroicons-outline:exclamation-circle",
-    link: "/app/urgent-actions",
-    permission: "VIEW_REPORTS",
-  },
-  {
-    isHeadr: true,
     title: "User management",
   },
   {
