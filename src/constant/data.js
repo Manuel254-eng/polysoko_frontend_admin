@@ -71,7 +71,7 @@ export const menuItems = [
       {
         childtitle: "Campuses",
         childlink: "/app/markets/campuses",
-        permission: "CREATE_MARKET",
+        permission: "VIEW_CAMPUS",
       },
       {
         childtitle: "Resolution Requests",
