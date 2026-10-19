@@ -43,7 +43,7 @@
           <Breadcrumbs v-if="!this.$route.meta.hide" />
           <router-view v-slot="{ Component }">
             <transition name="router-animation" mode="out-in" appear>
-              <component :is="Component"></component>
+              <component :is="Component" :key="$route.fullPath"></component>
             </transition>
           </router-view>
         </div>
