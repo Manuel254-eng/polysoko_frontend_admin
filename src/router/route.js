@@ -32,6 +32,20 @@ const routes = [
         },
       },
       {
+        path: "urgent-actions",
+        name: "urgent-actions",
+        component: () => import("@/views/urgent-actions/index.vue"),
+        meta: { permission: "VIEW_REPORTS" },
+      },
+      {
+        path: "urgent-actions",
+        name: "urgent-actions",
+        component: () => import("@/views/urgent-actions/index.vue"),
+        meta: {
+          permission: "VIEW_REPORTS",
+        },
+      },
+      {
         path: "users",
         name: "users",
         component: () => import("@/views/users/index.vue"),
