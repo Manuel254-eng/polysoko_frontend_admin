@@ -242,6 +242,7 @@ const ROUTE_PERMISSIONS = {
   "market-categories": "CREATE_MARKET_CATEGORY",
   "market-categories-create": "CREATE_MARKET_CATEGORY",
   "market-campuses": "CREATE_MARKET",
+  "market-campuses-view": "CREATE_MARKET",
   "market-campuses-create": "CREATE_MARKET",
   "market-campuses-view": "VIEW_MARKET",
   "market-resolution-requests": "APPROVE_MARKET_RESOLUTION",
