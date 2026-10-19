@@ -285,7 +285,7 @@ export default {
       if (this.publishingId) return;
       this.publishingId = id;
       try {
-        const { data } = await api.patch(`/market/${id}/`, { is_published: true });
+        const { data } = await api.post(`/market/${id}/publish/`);
         const market = this.markets.find((m) => m.id === id);
         if (market) market.is_published = data.is_published;
         pushSuccess("Market published.");
