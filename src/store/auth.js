@@ -1,11 +1,19 @@
 import { defineStore } from "pinia";
 import api from "@/lib/api";
+import { hasPermission } from "@/lib/permissions";
 
 export const useAuthStore = defineStore("auth", {
   state: () => ({
     user: null,
   }),
+  getters: {
+    permissions: (state) => state.user?.permissions || [],
+  },
   actions: {
+    // A permission name, or a list meaning "any of these".
+    can(required) {
+      return hasPermission(this.permissions, required);
+    },
     async fetchMe() {
       const response = await api.get("/user/staff/me/");
       this.user = response.data;

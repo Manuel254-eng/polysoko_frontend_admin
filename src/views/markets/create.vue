@@ -54,6 +54,14 @@
               </select>
               <div v-if="fieldErrors.category" class="text-danger-500 text-sm mt-1">{{ fieldErrors.category }}</div>
             </div>
+            <div>
+              <label class="input-label" for="campus">Campus Corner</label>
+              <select id="campus" v-model="campus" class="input-control w-full h-[48px]">
+                <option value="">General market (no campus)</option>
+                <option v-for="item in campuses" :key="item.id" :value="item.id">{{ item.name }}</option>
+              </select>
+              <div v-if="fieldErrors.campus" class="text-danger-500 text-sm mt-1">{{ fieldErrors.campus }}</div>
+            </div>
             <div @click="clearFieldError('open_at')">
               <label class="input-label" for="open_at">Opens at</label>
               <flat-pickr
@@ -326,12 +334,14 @@ export default {
       title: "",
       description: "",
       category: "",
+      campus: "",
       resolutionDate: "",
       openAt: "",
       closeAt: "",
       // fixed at component creation — good enough for a form that's filled out in one sitting
       minDateTime: toDateTimeLocal(new Date()),
       categories: [],
+      campuses: [],
       loading: false,
       backLoading: false,
       fieldErrors: {},
@@ -446,8 +456,12 @@ export default {
   },
   async mounted() {
     try {
-      const { data } = await api.get("/market/categories/");
-      this.categories = data;
+      const [{ data: categories }, { data: campuses }] = await Promise.all([
+        api.get("/market/categories/"),
+        api.get("/market/campuses/"),
+      ]);
+      this.categories = categories;
+      this.campuses = campuses.filter((campus) => campus.is_active);
     } catch {
       pushError("Could not load categories. Please refresh and try again.");
     }
@@ -534,6 +548,7 @@ export default {
           title: this.title.trim(),
           description: this.description.trim(),
           category: this.category,
+          campus: this.campus || null,
           resolution_date: new Date(this.resolutionDate).toISOString(),
           open_at: new Date(this.openAt).toISOString(),
           close_at: new Date(this.closeAt).toISOString(),
@@ -586,6 +601,7 @@ export default {
       this.title = market.title;
       this.description = market.description || "";
       this.category = market.category;
+      this.campus = market.campus || "";
       this.resolutionDate = toDateTimeLocal(new Date(market.resolution_date));
       this.openAt = toDateTimeLocal(new Date(market.open_at));
       this.closeAt = toDateTimeLocal(new Date(market.close_at));

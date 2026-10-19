@@ -72,6 +72,11 @@ const routes = [
         component: () => import("@/views/markets/categories/index.vue"),
       },
       {
+        path: "markets/campuses",
+        name: "market-campuses",
+        component: () => import("@/views/markets/campuses/index.vue"),
+      },
+      {
         path: "markets/categories/create",
         name: "market-categories-create",
         component: () => import("@/views/markets/categories/create.vue"),
@@ -168,6 +173,37 @@ const routes = [
         name: "accounting-reserve-add",
         component: () => import("@/views/accounting/reserve/add.vue"),
       },
+      {
+        path: "proposals",
+        name: "proposals",
+        component: () => import("@/views/proposals/index.vue"),
+      },
+      {
+        path: "proposals/create",
+        name: "proposals-create",
+        component: () => import("@/views/proposals/form.vue"),
+      },
+      {
+        path: "proposals/search",
+        name: "proposals-search",
+        component: () => import("@/views/proposals/search.vue"),
+      },
+      {
+        path: "proposals/:id",
+        name: "proposal-details",
+        component: () => import("@/views/proposals/view.vue"),
+        meta: {
+          hide: true,
+        },
+      },
+      {
+        path: "proposals/:id/edit",
+        name: "proposals-edit",
+        component: () => import("@/views/proposals/form.vue"),
+        meta: {
+          hide: true,
+        },
+      },
     ],
   },
   {
@@ -176,5 +212,49 @@ const routes = [
     component: () => import("@/views/404.vue"),
   },
 ];
+
+// The permission each page needs — the same one its API calls check (see
+// lib/permissions.js; a list means "any of these"). The auth middleware
+// sends staff without it to the first page they can use.
+const PROPOSALS = ["PROPOSE_MARKET", "REVIEW_MARKET_PROPOSAL"];
+const ROUTE_PERMISSIONS = {
+  home: "VIEW_REPORTS",
+  users: "VIEW_USER",
+  "users-create": "CREATE_USER",
+  "users-clients": "VIEW_USER",
+  testing: "CREATE_USER",
+  "testing-simulate-bets": "CREATE_USER",
+  markets: "UPDATE_MARKET",
+  "markets-create": "CREATE_MARKET",
+  "markets-edit": "UPDATE_MARKET",
+  "market-details": "UPDATE_MARKET",
+  "market-categories": "CREATE_MARKET_CATEGORY",
+  "market-categories-create": "CREATE_MARKET_CATEGORY",
+  "market-campuses": "CREATE_MARKET",
+  "market-resolution-requests": "APPROVE_MARKET_RESOLUTION",
+  "market-combos": ["CREATE_COMBO", "UPDATE_COMBO"],
+  "market-combos-create": "CREATE_COMBO",
+  "market-combos-view": ["CREATE_COMBO", "UPDATE_COMBO"],
+  "market-combos-edit": "UPDATE_COMBO",
+  "market-jackpots": ["CREATE_JACKPOT", "UPDATE_JACKPOT"],
+  "market-jackpots-create": "CREATE_JACKPOT",
+  "market-jackpots-view": ["CREATE_JACKPOT", "UPDATE_JACKPOT"],
+  "market-jackpots-edit": "UPDATE_JACKPOT",
+  "bets-dashboard": "VIEW_REPORTS",
+  "bets-list": "VIEW_REPORTS",
+  "accounting-accounts": "VIEW_REPORTS",
+  "accounting-account-detail": "VIEW_REPORTS",
+  "accounting-reserve-add": "DEPOSIT_TO_PLATFORM",
+  proposals: PROPOSALS,
+  "proposals-create": "PROPOSE_MARKET",
+  "proposals-search": "PROPOSE_MARKET",
+  "proposal-details": PROPOSALS,
+  "proposals-edit": PROPOSALS,
+};
+for (const route of routes.find((r) => r.name === "Layout").children) {
+  if (route.name in ROUTE_PERMISSIONS) {
+    route.meta = { ...route.meta, permission: ROUTE_PERMISSIONS[route.name] };
+  }
+}
 
 export default routes;

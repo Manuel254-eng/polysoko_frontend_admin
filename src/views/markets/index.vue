@@ -9,6 +9,11 @@
             <option value="is_featured">Featured</option>
             <option value="is_pinned">Pinned</option>
           </select>
+          <select v-model="campusFilter" class="input-control h-[38px] w-auto" aria-label="Filter by campus">
+            <option value="">All campuses</option>
+            <option value="general">General markets</option>
+            <option v-for="campus in campuses" :key="campus.id" :value="campus.slug">{{ campus.name }}</option>
+          </select>
           <InputGroup v-model="searchTerm" placeholder="Search" type="text" prependIcon="heroicons-outline:search" merged />
           <router-link :to="{ name: 'markets-create' }" class="btn btn-dark btn-sm whitespace-nowrap">
             Add market
@@ -152,9 +157,11 @@ export default {
       errorMessage: "",
       markets: [],
       categories: [],
+      campuses: [],
       searchTerm: "",
       // "" | "is_featured" | "is_pinned" — sent as ?<field>=true, server-side like search.
       promotionFilter: "",
+      campusFilter: "",
       count: 0,
       next: null,
       previous: null,
@@ -171,6 +178,7 @@ export default {
       columns: [
         { label: "Title", field: "title" },
         { label: "Category", field: "category" },
+        { label: "Campus", field: "campus" },
         { label: "Status", field: "status" },
         { label: "Published", field: "is_published" },
         { label: "Resolution date", field: "resolution_date" },
@@ -182,11 +190,15 @@ export default {
     categoryNameById() {
       return Object.fromEntries(this.categories.map((category) => [category.id, category.name]));
     },
+    campusNameById() {
+      return Object.fromEntries(this.campuses.map((campus) => [campus.id, campus.name]));
+    },
     rows() {
       return this.markets.map((market) => ({
         id: market.id,
         title: market.title,
         category: this.categoryNameById[market.category] || "—",
+        campus: market.campus ? this.campusNameById[market.campus] || "—" : "General",
         status: market.status,
         is_published: market.is_published,
         is_featured: market.is_featured,
@@ -197,8 +209,12 @@ export default {
   },
   async mounted() {
     try {
-      const { data } = await api.get("/market/categories/");
-      this.categories = data;
+      const [{ data: categories }, { data: campuses }] = await Promise.all([
+        api.get("/market/categories/"),
+        api.get("/market/campuses/"),
+      ]);
+      this.categories = categories;
+      this.campuses = campuses;
     } catch {
       // categories are only used for display — a failed lookup just falls back to "—"
     }
@@ -212,6 +228,9 @@ export default {
       this.searchTimer = setTimeout(() => this.loadPage(1), 300);
     },
     promotionFilter() {
+      this.loadPage(1);
+    },
+    campusFilter() {
       this.loadPage(1);
     },
   },
@@ -285,7 +304,7 @@ export default {
       if (this.publishingId) return;
       this.publishingId = id;
       try {
-        const { data } = await api.patch(`/market/${id}/`, { is_published: true });
+        const { data } = await api.post(`/market/${id}/publish/`);
         const market = this.markets.find((m) => m.id === id);
         if (market) market.is_published = data.is_published;
         pushSuccess("Market published.");
@@ -305,6 +324,8 @@ export default {
         const search = this.searchTerm.trim();
         const params = { page, search: search || undefined };
         if (this.promotionFilter) params[this.promotionFilter] = true;
+        if (this.campusFilter && this.campusFilter !== "general") params.campus = this.campusFilter;
+        if (this.campusFilter === "general") params.campus_scope = "general";
         const { data } = await api.get("/market/", { params });
         if (requestId !== this.latestRequestId) return;
         this.markets = data.results;
