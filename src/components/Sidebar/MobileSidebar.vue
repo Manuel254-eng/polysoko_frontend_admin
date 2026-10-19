@@ -39,7 +39,8 @@
 <script>
 import { Icon } from "@iconify/vue";
 import { defineComponent } from "vue";
-import { menuItems } from "../../constant/data";
+import { visibleMenu } from "@/lib/permissions";
+import { useAuthStore } from "@/store/auth";
 import Navmenu from "./Navmenu";
 import { useThemeSettingsStore } from "@/store/themeSettings";
 const themeSettingsStore = useThemeSettingsStore();
@@ -51,10 +52,15 @@ export default defineComponent({
   },
   data() {
     return {
-      menuItems,
       openClass: "w-[248px]",
       closeClass: "w-[72px] close_sidebar",
     };
+  },
+  computed: {
+    // Only what this staff member's role allows (see lib/permissions.js).
+    menuItems() {
+      return visibleMenu(useAuthStore().permissions);
+    },
   },
   methods: {
     toggleMsidebar() {
