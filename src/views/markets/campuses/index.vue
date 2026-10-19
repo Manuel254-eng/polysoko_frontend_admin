@@ -1,80 +1,182 @@
 <template>
-  <div class="grid xl:grid-cols-3 gap-5">
-    <Card title="Add campus">
-      <form class="space-y-4" @submit.prevent="saveCampus">
-        <Textinput v-model="form.name" label="Campus name" placeholder="University of Nairobi" :error="errors.name" />
-        <Textinput v-model="form.slug" label="URL slug" placeholder="university-of-nairobi" :error="errors.slug" />
-        <Textinput v-model="form.location" label="Location" placeholder="Nairobi" :error="errors.location" />
-        <Textarea v-model="form.description" label="Description" :rows="4" :error="errors.description" />
-        <Checkbox v-model="form.is_active" :checked="form.is_active" label="Active" name="is_active" />
-        <Button type="submit" text="Create campus" btnClass="btn-dark" :isLoading="saving" />
-      </form>
-    </Card>
-
-    <Card title="Campuses" class="xl:col-span-2">
-      <div v-if="loading" class="text-slate-500 text-sm py-8 text-center">Loading…</div>
-      <div v-else-if="campuses.length === 0" class="text-slate-500 text-sm py-8 text-center">No campuses yet.</div>
-      <div v-else class="space-y-3">
-        <div v-for="campus in campuses" :key="campus.id" class="border border-slate-200 dark:border-slate-700 rounded p-4 flex items-center justify-between gap-4">
-          <div>
-            <div class="font-medium text-slate-900 dark:text-white">{{ campus.name }}</div>
-            <div class="text-xs text-slate-500 mt-1">{{ campus.location || "Location not set" }} · {{ campus.market_count }} markets · /{{ campus.slug }}</div>
-          </div>
-          <button class="btn btn-sm" :class="campus.is_active ? 'btn-outline-danger' : 'btn-outline-success'" @click="toggleCampus(campus)">
-            {{ campus.is_active ? "Deactivate" : "Activate" }}
-          </button>
+  <div>
+    <Card noborder>
+      <div class="md:flex justify-between pb-6 md:space-y-0 space-y-3 items-center">
+        <h5>Campuses</h5>
+        <div class="flex items-center gap-3">
+          <InputGroup v-model="searchTerm" placeholder="Search campuses" type="text" prependIcon="heroicons-outline:search" merged />
+          <router-link :to="{ name: 'market-campuses-create' }" class="btn btn-dark btn-sm whitespace-nowrap">
+            Create campus
+          </router-link>
         </div>
       </div>
+      <div v-if="loading" class="text-slate-500 dark:text-slate-400 text-sm py-10 text-center">Loading…</div>
+      <div v-else-if="errorMessage" class="text-danger-500 text-sm py-10 text-center">{{ errorMessage }}</div>
+      <div v-else-if="!campuses.length" class="text-slate-500 dark:text-slate-400 text-sm py-10 text-center">No campuses yet.</div>
+      <vue-good-table v-else :columns="columns" :rows="campuses" styleClass="vgt-table bordered centered"
+        :pagination-options="{ enabled: true, perPage: 10 }"
+        :search-options="{ enabled: true, externalQuery: searchTerm }">
+        <template #table-row="props">
+          <span v-if="props.column.field === 'name'" class="flex items-center gap-3">
+            <img v-if="props.row.logo" :src="props.row.logo" :alt="props.row.name + ' logo'" class="w-10 h-10 object-contain flex-none" />
+            <span v-else class="w-10 h-10 rounded bg-slate-100 dark:bg-slate-700 flex items-center justify-center flex-none">—</span>
+            <span class="text-slate-600 dark:text-slate-300 font-medium">{{ props.row.name }}</span>
+          </span>
+          <span v-else-if="props.column.field === 'is_active'"
+            class="inline-block px-3 py-1 rounded-full bg-opacity-25"
+            :class="props.row.is_active ? 'text-success-500 bg-success-500' : 'text-warning-500 bg-warning-500'">
+            {{ props.row.is_active ? 'Active' : 'Inactive' }}
+          </span>
+
+
+          <span v-else-if="props.column.field === 'action'">
+            <Dropdown classMenuItems="w-[140px]">
+              <span class="text-xl">
+                <Icon icon="heroicons-outline:dots-vertical" />
+              </span>
+
+              <template v-slot:menus>
+                <MenuItem
+                  v-for="(item, i) in rowActions(props.row)"
+                  :key="i"
+                  :disabled="updatingIds.includes(props.row.id)"
+                >
+                  <div
+                    @click="handleAction(item.name, props.row)"
+                    :class="`${
+                      item.name === 'delete'
+                        ? 'bg-danger-500 text-danger-500 bg-opacity-30 hover:bg-opacity-100 hover:text-white'
+                        : item.name === 'activate'
+                        ? 'bg-success-500 text-success-500 bg-opacity-30 hover:bg-opacity-100 hover:text-white'
+                        : 'hover:bg-slate-900 hover:text-white dark:hover:bg-slate-600 dark:hover:bg-opacity-50'
+                    } w-full border-b border-b-gray-500 border-opacity-10 px-4 py-2 text-sm last:mb-0 cursor-pointer first:rounded-t last:rounded-b flex space-x-2 items-center rtl:space-x-reverse ${
+                      updatingIds.includes(props.row.id)
+                        ? 'opacity-50 pointer-events-none'
+                        : ''
+                    }`"
+                  >
+                    <span class="text-base">
+                      <Icon :icon="item.icon" />
+                    </span>
+                    <span class="capitalize">{{ item.name }}</span>
+                  </div>
+                </MenuItem>
+              </template>
+            </Dropdown>
+          </span>
+          <span v-else>{{ props.formattedRow[props.column.field] || '—' }}</span>
+        </template>
+      </vue-good-table>
     </Card>
   </div>
 </template>
 
 <script>
 import Card from "@/components/Card";
-import Textinput from "@/components/Textinput";
-import Textarea from "@/components/Textarea";
-import Checkbox from "@/components/Checkbox";
-import Button from "@/components/Button";
+import InputGroup from "@/components/InputGroup";
 import api from "@/lib/api";
+import Dropdown from "@/components/Dropdown";
+import Icon from "@/components/Icon";
+import { MenuItem } from "@headlessui/vue";
 import { pushError, pushSuccess } from "@/lib/alerts";
-import { extractFieldErrors, extractGeneralError } from "@/lib/errors";
-
-const emptyForm = () => ({ name: "", slug: "", location: "", description: "", is_active: true });
+import { extractGeneralError } from "@/lib/errors";
 
 export default {
-  components: { Card, Textinput, Textarea, Checkbox, Button },
-  data: () => ({ campuses: [], form: emptyForm(), errors: {}, loading: true, saving: false }),
-  watch: {
-    "form.name"(name) {
-      if (!this.form.slug || this.form.slug === this.previousSlug) {
-        this.form.slug = name.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-        this.previousSlug = this.form.slug;
+  components: { Card, InputGroup, Dropdown, Icon, MenuItem },
+  data: () => ({
+    campuses: [], loading: true, errorMessage: "", searchTerm: "", updatingIds: [],
+    columns: [
+      { label: "Campus", field: "name" },
+      { label: "Slug", field: "slug" },
+      { label: "Location", field: "location" },
+      { label: "Markets", field: "market_count", type: "number" },
+      { label: "Status", field: "is_active", type: "boolean" },
+      { label: "Action", field: "action", sortable: false },
+    ],
+  }),
+  async mounted() {
+    try { this.campuses = (await api.get("/market/campuses/")).data; }
+    catch (err) { this.errorMessage = extractGeneralError(err) || "Could not load campuses."; }
+    finally { this.loading = false; }
+  },
+
+  methods: {
+    rowActions(row) {
+      return [
+        {
+          name: "view",
+          icon: "heroicons-outline:eye",
+        },
+        {
+          name: "edit",
+          icon: "heroicons:pencil-square",
+        },
+        {
+          name: row.is_active ? "deactivate" : "activate",
+          icon: row.is_active
+            ? "heroicons-outline:eye-off"
+            : "heroicons-outline:check-circle",
+        },
+      ];
+    },
+
+    handleAction(name, row) {
+      if (this.updatingIds.includes(row.id)) return;
+
+      switch (name) {
+        case "view":
+          this.$router.push({
+          name: "market-campuses-view",
+          params: { slug: row.slug },
+        });
+          break;
+        case "edit":
+          this.$router.push({
+            name: "market-campuses-edit",
+            params: { slug: row.slug },
+          });
+          break;
+
+        case "activate":
+        case "deactivate":
+          this.toggleCampus(row);
+          break;
+      }
+    },
+
+    async toggleCampus(row) {
+      if (this.updatingIds.includes(row.id)) return;
+
+      this.updatingIds.push(row.id);
+
+      try {
+        const { data } = await api.patch(
+          `/market/campuses/${row.slug}/`,
+          { is_active: !row.is_active }
+        );
+
+        const campus = this.campuses.find(
+          (item) => item.id === row.id
+        );
+
+        if (campus) {
+          Object.assign(campus, data);
+        }
+
+        pushSuccess(
+          `Campus ${data.is_active ? "activated" : "deactivated"}.`
+        );
+      } catch (err) {
+        pushError(
+          extractGeneralError(err) || "Could not update campus."
+        );
+      } finally {
+        this.updatingIds = this.updatingIds.filter(
+          (id) => id !== row.id
+        );
       }
     },
   },
-  async mounted() { await this.loadCampuses(); },
-  methods: {
-    async loadCampuses() {
-      this.loading = true;
-      try { this.campuses = (await api.get("/market/campuses/")).data; }
-      catch (err) { pushError(extractGeneralError(err) || "Could not load campuses."); }
-      finally { this.loading = false; }
-    },
-    async saveCampus() {
-      this.saving = true; this.errors = {};
-      try {
-        await api.post("/market/campuses/", this.form);
-        this.form = emptyForm(); this.previousSlug = "";
-        pushSuccess("Campus created."); await this.loadCampuses();
-      } catch (err) { this.errors = extractFieldErrors(err); pushError(extractGeneralError(err) || "Could not create campus."); }
-      finally { this.saving = false; }
-    },
-    async toggleCampus(campus) {
-      try {
-        const { data } = await api.patch(`/market/campuses/${campus.slug}/`, { is_active: !campus.is_active });
-        Object.assign(campus, data); pushSuccess(`Campus ${campus.is_active ? "activated" : "deactivated"}.`);
-      } catch (err) { pushError(extractGeneralError(err) || "Could not update campus."); }
-    },
-  },
+
 };
 </script>

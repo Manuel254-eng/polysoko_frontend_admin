@@ -77,6 +77,20 @@ const routes = [
         component: () => import("@/views/markets/campuses/index.vue"),
       },
       {
+        path: "markets/campuses/:slug",
+        name: "market-campuses-view",
+        component: () => import("@/views/markets/campuses/view.vue"),
+        meta: {
+          hide: true,
+        },
+      },
+
+      {
+        path: "markets/campuses/create",
+        name: "market-campuses-create",
+        component: () => import("@/views/markets/campuses/create.vue"),
+      },
+      {
         path: "markets/categories/create",
         name: "market-categories-create",
         component: () => import("@/views/markets/categories/create.vue"),
@@ -213,9 +227,6 @@ const routes = [
   },
 ];
 
-// The permission each page needs — the same one its API calls check (see
-// lib/permissions.js; a list means "any of these"). The auth middleware
-// sends staff without it to the first page they can use.
 const PROPOSALS = ["PROPOSE_MARKET", "REVIEW_MARKET_PROPOSAL"];
 const ROUTE_PERMISSIONS = {
   home: "VIEW_REPORTS",
@@ -231,6 +242,8 @@ const ROUTE_PERMISSIONS = {
   "market-categories": "CREATE_MARKET_CATEGORY",
   "market-categories-create": "CREATE_MARKET_CATEGORY",
   "market-campuses": "CREATE_MARKET",
+  "market-campuses-create": "CREATE_MARKET",
+  "market-campuses-view": "VIEW_MARKET",
   "market-resolution-requests": "APPROVE_MARKET_RESOLUTION",
   "market-combos": ["CREATE_COMBO", "UPDATE_COMBO"],
   "market-combos-create": "CREATE_COMBO",
