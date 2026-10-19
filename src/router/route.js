@@ -35,12 +35,6 @@ const routes = [
         path: "urgent-actions",
         name: "urgent-actions",
         component: () => import("@/views/urgent-actions/index.vue"),
-        meta: { permission: "VIEW_REPORTS" },
-      },
-      {
-        path: "urgent-actions",
-        name: "urgent-actions",
-        component: () => import("@/views/urgent-actions/index.vue"),
         meta: {
           permission: "VIEW_REPORTS",
         },
@@ -91,6 +85,11 @@ const routes = [
         component: () => import("@/views/markets/campuses/index.vue"),
       },
       {
+        path: "markets/campuses/create",
+        name: "market-campuses-create",
+        component: () => import("@/views/markets/campuses/create.vue"),
+      },
+      {
         path: "markets/campuses/:slug",
         name: "market-campuses-view",
         component: () => import("@/views/markets/campuses/view.vue"),
@@ -99,11 +98,6 @@ const routes = [
         },
       },
 
-      {
-        path: "markets/campuses/create",
-        name: "market-campuses-create",
-        component: () => import("@/views/markets/campuses/create.vue"),
-      },
       {
         path: "markets/categories/create",
         name: "market-categories-create",
@@ -138,6 +132,11 @@ const routes = [
         component: () => import("@/views/markets/combos/create.vue"),
       },
       {
+        path: "markets/combos/:id/edit",
+        name: "market-combos-edit",
+        component: () => import("@/views/markets/combos/create.vue"),
+      },
+      {
         path: "markets/combos/:id",
         name: "market-combos-view",
         component: () => import("@/views/markets/combos/view.vue"),
@@ -156,22 +155,17 @@ const routes = [
         component: () => import("@/views/markets/jackpots/create.vue"),
       },
       {
+        path: "markets/jackpots/:id/edit",
+        name: "market-jackpots-edit",
+        component: () => import("@/views/markets/jackpots/create.vue"),
+      },
+      {
         path: "markets/jackpots/:id",
         name: "market-jackpots-view",
         component: () => import("@/views/markets/jackpots/view.vue"),
         meta: {
           hide: true,
         },
-      },
-      {
-        path: "markets/jackpots/:id/edit",
-        name: "market-jackpots-edit",
-        component: () => import("@/views/markets/jackpots/create.vue"),
-      },
-      {
-        path: "markets/combos/:id/edit",
-        name: "market-combos-edit",
-        component: () => import("@/views/markets/combos/create.vue"),
       },
       {
         path: "bets",
@@ -217,17 +211,15 @@ const routes = [
         component: () => import("@/views/proposals/search.vue"),
       },
       {
-        path: "proposals/:id",
-        name: "proposal-details",
-        component: () => import("@/views/proposals/view.vue"),
-        meta: {
-          hide: true,
-        },
-      },
-      {
         path: "proposals/:id/edit",
         name: "proposals-edit",
         component: () => import("@/views/proposals/form.vue"),
+        meta: { hide: true },
+      },
+      {
+        path: "proposals/:id",
+        name: "proposal-details",
+        component: () => import("@/views/proposals/view.vue"),
         meta: {
           hide: true,
         },
