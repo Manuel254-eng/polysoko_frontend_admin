@@ -22,6 +22,7 @@ table.vgt-table {
 // Keep the vue-good-table pagination footer consistent with the dark theme.
 .dark .vgt-wrap__footer {
   @apply bg-slate-800 border-slate-700 text-slate-300;
+  background: #1e293b !important;
 
   .footer__row-count__label,
   .footer__navigation__info,
