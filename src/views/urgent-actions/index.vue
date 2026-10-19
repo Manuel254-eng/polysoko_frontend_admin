@@ -22,6 +22,7 @@
 import Card from "@/components/Card";
 import api from "@/lib/api";
 import { extractGeneralError } from "@/lib/errors";
+import { formatDateTime } from "@/lib/formatters";
 
 export default {
   components: { Card },
@@ -31,7 +32,7 @@ export default {
     { label: "Action", field: "action", sortable: false },
   ]}),
   computed: {
-    rows() { return this.markets.map((market) => ({ ...market, campus: market.campus_name || "General", resolution_date: new Date(market.resolution_date).toLocaleString(), overdue: new Date(market.resolution_date) < new Date() })); },
+    rows() { return this.markets.map((market) => ({ ...market, campus: market.campus_name || "General", resolution_date: formatDateTime(market.resolution_date), overdue: new Date(market.resolution_date) < new Date() })); },
   },
   async mounted() { await this.loadMarkets(); },
   methods: {

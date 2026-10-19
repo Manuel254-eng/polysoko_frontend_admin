@@ -144,6 +144,7 @@ import { useRouter } from "vue-router";
 import { pushSuccess, pushError } from "@/lib/alerts";
 import api from "@/lib/api";
 import { extractError } from "@/lib/errors";
+import { formatDateTime } from "@/lib/formatters";
 
 export default {
   components: { Card, InputGroup, Dropdown, Icon, Pagination, Modal, Button, MenuItem },
@@ -203,7 +204,7 @@ export default {
         is_published: market.is_published,
         is_featured: market.is_featured,
         is_pinned: market.is_pinned,
-        resolution_date: new Date(market.resolution_date).toLocaleString(),
+        resolution_date: formatDateTime(market.resolution_date),
       }));
     },
   },

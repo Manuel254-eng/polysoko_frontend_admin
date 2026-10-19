@@ -14,10 +14,11 @@
 import Card from "@/components/Card";
 import api from "@/lib/api";
 import { extractGeneralError } from "@/lib/errors";
+import { formatDateTime } from "@/lib/formatters";
 export default {
   components: { Card },
   data: () => ({ campus: null, markets: [], categoryNames: {}, loading: true, errorMessage: "", columns: [{ label: "Title", field: "title" }, { label: "Category", field: "category" }, { label: "Status", field: "status" }, { label: "Published", field: "is_published" }, { label: "Resolution date", field: "resolution_date" }, { label: "Action", field: "action", sortable: false }] }),
-  computed: { marketRows() { return this.markets.map((market) => ({ ...market, category: this.categoryNames[market.category] || "—", resolution_date: new Date(market.resolution_date).toLocaleString() })); } },
+  computed: { marketRows() { return this.markets.map((market) => ({ ...market, category: this.categoryNames[market.category] || "—", resolution_date: formatDateTime(market.resolution_date) })); } },
   async mounted() { try { const [{ data: campus }, { data: marketData }, { data: categories }] = await Promise.all([api.get(`/market/campuses/${this.$route.params.slug}/`), api.get("/market/", { params: { campus: this.$route.params.slug, page_size: 100 } }), api.get("/market/categories/")]); this.campus = campus; this.markets = marketData.results || marketData; this.categoryNames = Object.fromEntries(categories.map((item) => [item.id, item.name])); } catch (err) { this.errorMessage = extractGeneralError(err) || "Could not load campus details."; } finally { this.loading = false; } },
 };
 </script>
