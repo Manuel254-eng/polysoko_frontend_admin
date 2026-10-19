@@ -56,7 +56,7 @@
             </div>
             <div>
               <label class="input-label" for="campus">Campus Corner</label>
-              <select id="campus" v-model="campus" class="input-control w-full h-[48px]">
+              <select id="campus" v-model="campus" class="input-control w-full h-[48px]" :disabled="campusLocked">
                 <option value="">General market (no campus)</option>
                 <option v-for="item in campuses" :key="item.id" :value="item.id">{{ item.name }}</option>
               </select>
@@ -370,6 +370,9 @@ export default {
     isEdit() {
       return this.$route.name === "markets-edit";
     },
+    campusLocked() {
+      return !this.isEdit && Boolean(this.$route.query.campus);
+    },
     // altInput shows the human-readable altFormat text; the underlying
     // v-model value keeps dateFormat so it stays a drop-in for
     // new Date(...)/toDateTimeLocal() elsewhere in this component.
@@ -462,6 +465,7 @@ export default {
       ]);
       this.categories = categories;
       this.campuses = campuses.filter((campus) => campus.is_active);
+      if (this.campusLocked) this.campus = Number(this.$route.query.campus);
     } catch {
       pushError("Could not load categories. Please refresh and try again.");
     }
